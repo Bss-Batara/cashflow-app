@@ -1113,3 +1113,12 @@ if (document.readyState === 'loading') {
     }
   });
 }
+// Keep delete available in the dashboard's recent transaction activity.
+// The existing renderer remains reusable for views that explicitly hide it.
+(() => {
+  const renderTransactionItem = FinApp.prototype.renderTransactionItem;
+  FinApp.prototype.renderTransactionItem = function (tx, showDelete) {
+    return renderTransactionItem.call(this, tx, showDelete === undefined ? true : showDelete);
+  };
+  if (window.app) window.app.renderDashboard();
+})();
