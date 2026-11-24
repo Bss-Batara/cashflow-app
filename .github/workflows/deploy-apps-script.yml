@@ -2,45 +2,50 @@ name: Deploy Apps Script backend
 
 on:
   push:
-    branches: [main]
-    paths:
-      - 'backend/apps-script/**'
-      - '.github/workflows/deploy-apps-script.yml'
-  workflow_dispatch:
+      branches: [main]
+          paths:
+                - 'backend/apps-script/**'
+                      - '.github/workflows/deploy-apps-script.yml'
+                        workflow_dispatch:
 
-jobs:
-  deploy:
-    # The workflow remains safely skipped until the owner configures the
-    # one-time Apps Script secrets in GitHub repository settings.
-    if: ${{ secrets.CLASP_SCRIPT_ID != '' && secrets.CLASP_DEPLOYMENT_ID != '' && secrets.CLASP_CREDENTIALS != '' }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+                        permissions:
+                          contents: read
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
+                          jobs:
+                            deploy:
+                                runs-on: ubuntu-latest
+                                    env:
+                                          CLASP_SCRIPT_ID: ${{ secrets.CLASP_SCRIPT_ID }}
+                                                CLASP_DEPLOYMENT_ID: ${{ secrets.CLASP_DEPLOYMENT_ID }}
+                                                      CLASP_CREDENTIALS: ${{ secrets.CLASP_CREDENTIALS }}
+                                                          steps:
+                                                                - name: Checkout
+                                                                        uses: actions/checkout@v4
 
-      - name: Install clasp
-        run: npm install --global @google/clasp
-
-      - name: Configure clasp
-        working-directory: backend/apps-script
-        env:
-          CLASP_SCRIPT_ID: ${{ secrets.CLASP_SCRIPT_ID }}
-          CLASP_CREDENTIALS: ${{ secrets.CLASP_CREDENTIALS }}
-        run: |
-          printf '%s' "$CLASP_CREDENTIALS" > "$HOME/.clasprc.json"
-          printf '{"scriptId":"%s","rootDir":"."}' "$CLASP_SCRIPT_ID" > .clasp.json
-
-      - name: Push Apps Script source
-        working-directory: backend/apps-script
-        run: clasp push --force
-
-      - name: Update web app deployment
-        working-directory: backend/apps-script
-        env:
-          CLASP_DEPLOYMENT_ID: ${{ secrets.CLASP_DEPLOYMENT_ID }}
-        run: clasp deploy --deploymentId "$CLASP_DEPLOYMENT_ID" --description "Automated deployment $GITHUB_SHA"
+                                                                              - name: Setup Node.js
+                                                                                      uses: actions/setup-node@v4
+                                                                                              with:
+                                                                                                        node-version: 20
+                                                                                                        
+                                                                                                              - name: Install clasp
+                                                                                                                      run: npm install --global @google/clasp
+                                                                                                                      
+                                                                                                                            - name: Skip deployment when credentials are not configured
+                                                                                                                                    if: env.CLASP_SCRIPT_ID == '' || env.CLASP_DEPLOYMENT_ID == '' || env.CLASP_CREDENTIALS == ''
+                                                                                                                                            run: echo 'Apps Script deployment skipped: configure CLASP_SCRIPT_ID, CLASP_DEPLOYMENT_ID, and CLASP_CREDENTIALS repository secrets.'
+                                                                                                                                            
+                                                                                                                                                  - name: Configure clasp
+                                                                                                                                                          if: env.CLASP_SCRIPT_ID != '' && env.CLASP_DEPLOYMENT_ID != '' && env.CLASP_CREDENTIALS != ''
+                                                                                                                                                                  shell: bash
+                                                                                                                                                                          run: |
+                                                                                                                                                                                    printf '%s' "$CLASP_CREDENTIALS" > "$HOME/.clasprc.json"
+                                                                                                                                                                                              printf '{"scriptId":"%s","rootDir":"backend/apps-script"}\n' "$CLASP_SCRIPT_ID" > .clasp.json
+                                                                                                                                                                                              
+                                                                                                                                                                                                    - name: Push Apps Script source
+                                                                                                                                                                                                            if: env.CLASP_SCRIPT_ID != '' && env.CLASP_DEPLOYMENT_ID != '' && env.CLASP_CREDENTIALS != ''
+                                                                                                                                                                                                                    run: npx clasp push --force
+                                                                                                                                                                                                                    
+                                                                                                                                                                                                                          - name: Update web app deployment
+                                                                                                                                                                                                                                  if: env.CLASP_SCRIPT_ID != '' && env.CLASP_DEPLOYMENT_ID != '' && env.CLASP_CREDENTIALS != ''
+                                                                                                                                                                                                                                          run: npx clasp deploy --deploymentId "$CLASP_DEPLOYMENT_ID" --description "Automated deployment $GITHUB_SHA"
+                                                                                                                                                                                                                                          
