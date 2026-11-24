@@ -1,0 +1,35 @@
+name: Validate CashFlow
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Validate JavaScript syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          find js backend/apps-script -type f \( -name '*.js' -o -name '*.gs' \) -print0 |
+            xargs -0 -n1 node --check
+
+      - name: Validate required deployment files
+        shell: bash
+        run: |
+          test -f index.html
+          test -f backend/apps-script/appsscript.json
+          test -f js/api.js
+          test -f js/store.js
+          test -f backend/apps-script/Investments.gs

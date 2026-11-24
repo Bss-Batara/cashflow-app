@@ -604,3 +604,62 @@ window.formatPercent = function(value) {
 };
 
 window.financeStore = new FinanceStore();
+// Remote investment persistence extension.
+(() => {
+  const localAddInvestment = FinanceStore.prototype.addInvestment;
+  const localSyncFromApi = FinanceStore.prototype.syncFromApi;
+
+  FinanceStore.prototype.syncInvestmentsFromApi_ = async function () {
+    const response = await window.CashflowApi.get('listInvestments');
+    const investments = response.items.map(item => {
+      const name = String(item.name || '');
+      const category = name.startsWith('Tabungan ') ? name.substring(9) : (item.categoryId || 'Lainnya');
+      return {
+        id: item.investmentId,
+        name: name,
+        code: item.code,
+        category: category,
+        buyPrice: Number(item.buyPriceMinor) || 0,
+        currentPrice: Number(item.currentPriceMinor) || 0,
+        units: Number(item.units) || 0,
+        unitName: item.unitName || 'unit',
+        unitMultiplier: Number(item.unitMultiplier) || 1,
+        dateBought: item.dateBought,
+        notes: item.notes || '',
+        version: item.version,
+        status: item.status
+      };
+    });
+    this.saveInvestments(investments);
+    return investments;
+  };
+
+  FinanceStore.prototype.addInvestment = function (inv) {
+    if (window.CashflowApi?.enabled()) {
+      return (async () => {
+        const category = inv.category || 'Lainnya';
+        const result = await window.CashflowApi.post('createInvestment', {
+          name: inv.name,
+          code: (inv.code || inv.name.substring(0, 4)).toUpperCase(),
+          categoryId: 'investment-general',
+          buyPriceMinor: Math.round(Number(inv.buyPrice) || 0),
+          currentPriceMinor: Math.round(Number(inv.currentPrice ?? inv.buyPrice) || 0),
+          units: Number(inv.units) || 0,
+          unitName: inv.unitName || 'unit',
+          unitMultiplier: category === 'Saham' ? 100 : 1,
+          dateBought: inv.dateBought || new Date().toISOString().split('T')[0],
+          notes: inv.notes || ''
+        });
+        await this.syncInvestmentsFromApi_();
+        return result;
+      })();
+    }
+    return localAddInvestment.call(this, inv);
+  };
+
+  if (window.CashflowApi?.enabled()) {
+    setTimeout(() => this.syncInvestmentsFromApi_().catch(error => {
+      console.error('Failed to sync investments with Cashflow API:', error);
+    }), 0);
+  }
+})();

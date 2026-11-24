@@ -187,3 +187,18 @@ function verifyApiHealth() {
   Logger.log(response.getContent());
   return response.getContent();
 }
+// Extend the router with investment actions without relying on Apps Script file order.
+(() => {
+  const originalDispatch = dispatchApiAction_;
+  dispatchApiAction_ = function (action, request) {
+    const source = request.method === 'GET' ? request.parameters : request.body;
+    const payload = request.method === 'POST' ? (source.payload || source.data || source) : source;
+    switch (action) {
+      case 'listInvestments': return listInvestments({ includeVoided: toBoolean_(payload.includeVoided) });
+      case 'createInvestment': requirePost_(request); return createInvestment(payload);
+      case 'updateInvestment': requirePost_(request); return updateInvestment(payload);
+      case 'voidInvestment': requirePost_(request); return voidInvestment(payload.investmentId, payload.expectedVersion);
+      default: return originalDispatch(action, request);
+    }
+  };
+})();
