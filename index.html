@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#be123c">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="CashFlow">
+  <title>CashFlow - Catat Keuangan & Portofolio Investasi</title>
+  
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <div class="app-container">
+    
+    <!-- DESKTOP SIDEBAR -->
+    <aside class="sidebar">
+      <div class="brand-container">
+        <div class="brand-logo">Rp</div>
+        <div>
+          <div class="brand-title">CashFlow</div>
+          <div class="brand-subtitle">Smart Finance & Assets</div>
+        </div>
+      </div>
+
+      <ul class="nav-menu">
+        <li class="nav-item active" data-view="dashboard">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          <span>Ringkasan</span>
+        </li>
+        <li class="nav-item" data-view="expenses">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+          <span>Pengeluaran Harian</span>
+        </li>
+        <li class="nav-item" data-view="income">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+          <span>Arus Kas & Income</span>
+        </li>
+        <li class="nav-item" data-view="portfolio">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          <span>Portofolio Investasi</span>
+        </li>
+        <li class="nav-item" data-view="reports">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          <span>Analisis & Laporan</span>
+        </li>
+        <li class="nav-item" data-view="settings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          <span>Pengaturan</span>
+        </li>
+      </ul>
+
+      <div class="sidebar-footer">
+        <div class="networth-badge">
+          <div class="text-xs text-muted">Total Kekayaan Bersih</div>
+          <div id="sidebar-networth" class="text-lg font-bold text-income">Rp 0</div>
+          <div class="text-xs text-secondary" style="margin-top: 4px;">Kas + Nilai Investasi</div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN BODY -->
+    <main class="main-content">
+      
+      <!-- MOBILE HEADER -->
+      <div class="mobile-header">
+        <div class="mobile-brand">
+          <div class="logo-icon">Rp</div>
+          <div>
+            <div class="font-bold text-sm">CashFlow</div>
+            <div id="mobile-header-subtitle" class="text-xs text-muted">Ringkasan Keuangan</div>
+          </div>
+        </div>
+        <div style="display: flex; gap: 6px;">
+          <button class="btn btn-rp-keluar btn-sm" onclick="app.openTxModal('expense')">
+            <span>Rp Keluar</span>
+          </button>
+          <button class="btn btn-rp-masuk btn-sm" onclick="app.openTxModal('income')">
+            <span>Rp Masuk</span>
+          </button>
+          <button class="btn btn-rp-nabung btn-sm" onclick="app.openInvestModal()">
+            <span>Rp Nabung</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- DESKTOP HEADER -->
+      <header class="desktop-header">
+        <div>
+          <h1 id="desktop-page-title" class="text-2xl font-bold">Ringkasan Keuangan</h1>
+          <p id="desktop-page-desc" class="text-sm text-secondary">Pantau cash flow, pengeluaran harian, dan pertumbuhan portofolio investasi</p>
+        </div>
+        <div class="header-actions">
+          <button class="btn btn-rp-keluar" onclick="app.openTxModal('expense')">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+            <span>Rp Keluar</span>
+          </button>
+          <button class="btn btn-rp-masuk" onclick="app.openTxModal('income')">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+            <span>Rp Masuk</span>
+          </button>
+          <button class="btn btn-rp-nabung" onclick="app.openInvestModal()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <span>Rp Nabung</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- VIEW 1: DASHBOARD / RINGKASAN -->
+      <section id="view-dashboard" class="view-panel active">
+        
+        <!-- Mobile Sync Banner (Visible when running on server) -->
+        <div id="mobile-sync-banner" class="card" style="display: none; align-items: center; justify-content: space-between; background: linear-gradient(135deg, #fff5f5 0%, #ffffff 100%); border: 1.5px dashed var(--border-color); padding: 12px 18px; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <span style="font-size: 1.5rem;">📱</span>
+            <div>
+              <div class="font-bold text-sm" style="color: var(--text-dark-red);">Buka di Smartphone / HP Anda (Wi-Fi sama):</div>
+              <div class="text-xs text-secondary">Ketik di browser HP: <a id="mobile-sync-link" href="#" target="_blank" class="font-bold text-primary" style="text-decoration: underline;"></a></div>
+            </div>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="app.copyMobileLink()">Salin Alamat HP</button>
+        </div>
+
+        <!-- Top Metrics Cards -->
+        <div class="grid-4" style="margin-bottom: 20px;">
+          <div class="metric-card income">
+            <div class="metric-top">
+              <span class="metric-label">Total Pemasukan</span>
+              <div class="metric-icon-wrap">↓</div>
+            </div>
+            <div id="dash-total-income" class="metric-value text-income">Rp 0</div>
+            <div class="metric-sub">Bulan ini & pemasukan aktif</div>
+          </div>
+
+          <div class="metric-card expense">
+            <div class="metric-top">
+              <span class="metric-label">Total Pengeluaran</span>
+              <div class="metric-icon-wrap">↑</div>
+            </div>
+            <div id="dash-total-expense" class="metric-value text-expense">Rp 0</div>
+            <div class="metric-sub">Kebutuhan harian & tagihan</div>
+          </div>
+
+          <div class="metric-card netflow">
+            <div class="metric-top">
+              <span class="metric-label">Arus Kas Bersih</span>
+              <div class="metric-icon-wrap">⚡</div>
+            </div>
+            <div id="dash-net-cashflow" class="metric-value">Rp 0</div>
+            <div id="dash-savings-rate" class="metric-sub">Savings Rate: 0%</div>
+          </div>
+
+          <div class="metric-card portfolio">
+            <div class="metric-top">
+              <span class="metric-label">Portofolio Investasi</span>
+              <div class="metric-icon-wrap">📈</div>
+            </div>
+            <div id="dash-portfolio-val" class="metric-value" style="color: var(--accent-gold);">Rp 0</div>
+            <div id="dash-portfolio-gain" class="metric-sub">Return: Rp 0 (+0%)</div>
+          </div>
+        </div>
+
+        <!-- Daily Budget Alert Card -->
+        <div class="card daily-status-card">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <div class="text-xs text-muted" style="text-transform: uppercase; letter-spacing: 0.05em;">Status Pengeluaran Hari Ini</div>
+              <div id="dash-daily-status-text" class="text-lg font-bold" style="margin-top: 2px;">
+                Rp 0 terpakai dari batas Rp 200.000
+              </div>
+            </div>
+            <div id="dash-daily-badge" class="badge badge-income">Aman</div>
+          </div>
+          <div class="budget-gauge">
+            <div id="dash-daily-gauge" class="budget-gauge-fill" style="width: 0%; background-color: var(--income-color);"></div>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--text-secondary);">
+            <span id="dash-daily-remaining">Sisa kuota: Rp 200.000</span>
+            <span id="dash-daily-percent">0% terpakai</span>
+          </div>
+        </div>
+
+        <!-- Charts Grid -->
+        <div class="grid-2" style="margin-bottom: 20px;">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                <span>Arus Kas (Masuk vs Keluar)</span>
+              </div>
+              <div class="badge badge-neutral">Minggu Ini</div>
+            </div>
+            <canvas id="cashflow-bar-chart" style="width: 100%; height: 220px;"></canvas>
+            <div style="display: flex; justify-content: center; gap: 20px; margin-top: 10px; font-size: 0.8rem;">
+              <span style="display: flex; align-items: center; gap: 6px;"><span style="width: 10px; height: 10px; background: #10b981; border-radius: 2px;"></span> Pemasukan</span>
+              <span style="display: flex; align-items: center; gap: 6px;"><span style="width: 10px; height: 10px; background: #e11d48; border-radius: 2px;"></span> Pengeluaran</span>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 10 10h-10z"/></svg>
+                <span>Alokasi Aset Investasi</span>
+              </div>
+              <button class="btn btn-secondary btn-sm" onclick="app.navigateTo('portfolio')">Lihat Detail</button>
+            </div>
+            <canvas id="portfolio-donut-chart" style="width: 100%; height: 220px;"></canvas>
+            <div id="portfolio-chart-legend" style="display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 10px; font-size: 0.78rem;"></div>
+          </div>
+        </div>
+
+        <!-- Recent Transactions -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              <span>Aktivitas Transaksi Terbaru</span>
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="app.navigateTo('expenses')">Lihat Semua</button>
+          </div>
+          <div id="dash-recent-tx-list" class="tx-list"></div>
+        </div>
+      </section>
+
+      <!-- VIEW 2: PENGELUARAN HARIAN -->
+      <section id="view-expenses" class="view-panel">
+        <div class="card" style="margin-bottom: 20px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
+            <div>
+              <div class="text-xs text-muted uppercase">Pengeluaran Hari Ini</div>
+              <div id="expense-today-sum" class="text-2xl font-bold text-expense">Rp 0</div>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn btn-rp-keluar" onclick="app.openTxModal('expense')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                <span>+ Rp Keluar</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Daily Limit Gauge -->
+          <div class="budget-gauge">
+            <div id="expense-daily-gauge" class="budget-gauge-fill" style="width: 0%; background-color: var(--expense-color);"></div>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-secondary);">
+            <span id="expense-daily-info">Batas Harian: Rp 200.000</span>
+            <span id="expense-daily-status-pill" class="badge badge-income">Terkendali</span>
+          </div>
+        </div>
+
+        <!-- Filter & Search Controls -->
+        <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px;">
+          <div class="filter-pills">
+            <button class="pill-btn active" onclick="app.setExpenseFilter('today', this)">Hari Ini</button>
+            <button class="pill-btn" onclick="app.setExpenseFilter('yesterday', this)">Kemarin</button>
+            <button class="pill-btn" onclick="app.setExpenseFilter('week', this)">7 Hari</button>
+            <button class="pill-btn" onclick="app.setExpenseFilter('month', this)">Bulan Ini</button>
+            <button class="pill-btn" onclick="app.setExpenseFilter('all', this)">Semua Transaksi</button>
+          </div>
+
+          <div style="display: flex; gap: 10px;">
+            <input type="text" id="expense-search-input" class="form-control" placeholder="Cari pengeluaran (misal: kopi, bensin, supermarket)..." oninput="app.searchExpenses(this.value)">
+            <select id="expense-category-filter" class="form-control" style="width: 180px; flex-shrink: 0;" onchange="app.filterExpenseCategory(this.value)">
+              <option value="all">Semua Kategori</option>
+              <option value="Makanan & Minuman">Makanan & Minuman</option>
+              <option value="Transportasi & Bensin">Transportasi & Bensin</option>
+              <option value="Kebutuhan Harian & Dapur">Kebutuhan Harian & Dapur</option>
+              <option value="Tagihan, Listrik & WiFi">Tagihan, Listrik & WiFi</option>
+              <option value="Belanja Pribadi & Fashion">Belanja Pribadi</option>
+              <option value="Hiburan, Hobi & Liburan">Hiburan & Liburan</option>
+              <option value="Kesehatan & Medis">Kesehatan & Medis</option>
+              <option value="Pendidikan & Kursus">Pendidikan & Kursus</option>
+              <option value="Keluarga, Anak & Orang Tua">Keluarga & Anak</option>
+              <option value="Sedekah, Zakat & Sosial">Sedekah & Sosial</option>
+              <option value="Cicilan & Finansial">Cicilan & Finansial</option>
+              <option value="Lain-lain">Lain-lain</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Expense Transactions List -->
+        <div class="card">
+          <div id="expense-list-container" class="tx-list"></div>
+        </div>
+      </section>
+
+      <!-- VIEW 3: ARUS KAS & INCOME -->
+      <section id="view-income" class="view-panel">
+        <div class="grid-3" style="margin-bottom: 20px;">
+          <div class="metric-card income">
+            <div class="metric-top">
+              <span class="metric-label">Total Pemasukan</span>
+              <div class="metric-icon-wrap">💰</div>
+            </div>
+            <div id="income-total-val" class="metric-value text-income">Rp 0</div>
+            <div class="metric-sub">Akumulasi pemasukan aktif</div>
+          </div>
+
+          <div class="metric-card netflow">
+            <div class="metric-top">
+              <span class="metric-label">Net Cash Inflow</span>
+              <div class="metric-icon-wrap">⚡</div>
+            </div>
+            <div id="income-net-val" class="metric-value">Rp 0</div>
+            <div class="metric-sub">Pemasukan dikurangi pengeluaran</div>
+          </div>
+
+          <div class="metric-card portfolio">
+            <div class="metric-top">
+              <span class="metric-label">Tingkat Tabungan (Savings)</span>
+              <div class="metric-icon-wrap">📊</div>
+            </div>
+            <div id="income-savings-percent" class="metric-value" style="color: var(--accent-blue);">0%</div>
+            <div class="metric-sub">Target ideal: > 20%</div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom: 20px;">
+          <div class="card-header">
+            <div class="card-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+              <span>Daftar Sumber Pemasukan</span>
+            </div>
+            <button class="btn btn-rp-masuk btn-sm" onclick="app.openTxModal('income')">
+              <span>+ Rp Masuk</span>
+            </button>
+          </div>
+          <div id="income-list-container" class="tx-list"></div>
+        </div>
+      </section>
+
+      <!-- VIEW 4: PORTOFOLIO INVESTASI -->
+      <section id="view-portfolio" class="view-panel">
+        <div class="grid-4" style="margin-bottom: 20px;">
+          <div class="metric-card portfolio">
+            <div class="metric-top">
+              <span class="metric-label">Total Nilai Sekarang</span>
+              <div class="metric-icon-wrap">📈</div>
+            </div>
+            <div id="port-total-value" class="metric-value" style="color: var(--accent-gold);">Rp 0</div>
+            <div class="metric-sub">Berdasarkan harga pasar terkini</div>
+          </div>
+
+          <div class="metric-card netflow">
+            <div class="metric-top">
+              <span class="metric-label">Modal Diinvestasikan</span>
+              <div class="metric-icon-wrap">💼</div>
+            </div>
+            <div id="port-total-capital" class="metric-value">Rp 0</div>
+            <div class="metric-sub">Total biaya modal pembelian</div>
+          </div>
+
+          <div class="metric-card income">
+            <div class="metric-top">
+              <span class="metric-label">Keuntungan (Unrealized)</span>
+              <div class="metric-icon-wrap">🚀</div>
+            </div>
+            <div id="port-total-profit" class="metric-value text-income">Rp 0</div>
+            <div id="port-profit-percent" class="metric-sub">+0.00%</div>
+          </div>
+
+          <div class="metric-card" style="border-left: 4px solid var(--accent-purple);">
+            <div class="metric-top">
+              <span class="metric-label">Aset Terbesar</span>
+              <div class="metric-icon-wrap" style="background: rgba(168, 85, 247, 0.15); color: var(--accent-purple);">⭐</div>
+            </div>
+            <div id="port-top-asset" class="metric-value text-base font-semibold" style="margin-top: 4px;">-</div>
+            <div id="port-top-val" class="metric-sub">-</div>
+          </div>
+        </div>
+
+        <!-- Portfolio Actions & Categories -->
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
+          <div class="filter-pills">
+            <button class="pill-btn active" onclick="app.setPortfolioCategory('all', this)">Semua Aset</button>
+            <button class="pill-btn" onclick="app.setPortfolioCategory('Dana Darurat', this)">Dana Darurat</button>
+            <button class="pill-btn" onclick="app.setPortfolioCategory('Saham', this)">Saham (IHSG)</button>
+            <button class="pill-btn" onclick="app.setPortfolioCategory('Reksadana', this)">Reksa Dana</button>
+            <button class="pill-btn" onclick="app.setPortfolioCategory('Emas', this)">Emas Logam Mulia</button>
+            <button class="pill-btn" onclick="app.setPortfolioCategory('Kripto', this)">Kripto (Crypto)</button>
+            <button class="pill-btn" onclick="app.setPortfolioCategory('Obligasi', this)">SBN / Obligasi</button>
+          </div>
+
+          <button class="btn btn-rp-nabung" onclick="app.openInvestModal()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <span>+ Rp Nabung</span>
+          </button>
+        </div>
+
+        <!-- Investment Table Desktop / Cards Mobile -->
+        <div class="card">
+          <div class="invest-table-container">
+            <table class="invest-table">
+              <thead>
+                <tr>
+                  <th>Aset / Kode</th>
+                  <th>Kategori</th>
+                  <th>Jumlah Unit</th>
+                  <th>Harga Beli</th>
+                  <th>Harga Terkini</th>
+                  <th>Nilai Pasar</th>
+                  <th>Untung / Rugi</th>
+                  <th style="text-align: right;">Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="portfolio-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW 5: LAPORAN & ANALISIS -->
+      <section id="view-reports" class="view-panel">
+        <div class="grid-2" style="margin-bottom: 20px;">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <span>Kategori Pengeluaran Terbesar</span>
+              </div>
+            </div>
+            <canvas id="expense-category-donut" style="width: 100%; height: 220px;"></canvas>
+            <div id="expense-category-legend" style="margin-top: 14px; display: flex; flex-direction: column; gap: 8px;"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                <span>Indikator Kesehatan Finansial</span>
+              </div>
+            </div>
+            
+            <div style="display: flex; flex-direction: column; gap: 16px; margin-top: 10px;">
+              <div style="background: var(--bg-card-subtle); padding: 14px; border-radius: var(--radius-md);">
+                <div style="display: flex; justify-content: space-between; font-size: 0.88rem; margin-bottom: 6px;">
+                  <span class="font-medium">Rasio Tabungan & Investasi</span>
+                  <span id="health-savings-rate" class="font-bold text-income">0%</span>
+                </div>
+                <div class="text-xs text-muted">Persentase penghasilan yang tidak habis dibelanjakan. Target sehat: minimal 20%.</div>
+              </div>
+
+              <div style="background: var(--bg-card-subtle); padding: 14px; border-radius: var(--radius-md);">
+                <div style="display: flex; justify-content: space-between; font-size: 0.88rem; margin-bottom: 6px;">
+                  <span class="font-medium">Rasio Pengeluaran Harian</span>
+                  <span id="health-expense-rate" class="font-bold text-expense">0%</span>
+                </div>
+                <div class="text-xs text-muted">Beban pengeluaran terhadap total pemasukan. Idealnya di bawah 60%.</div>
+              </div>
+
+              <div style="background: var(--bg-card-subtle); padding: 14px; border-radius: var(--radius-md);">
+                <div style="display: flex; justify-content: space-between; font-size: 0.88rem; margin-bottom: 6px;">
+                  <span class="font-medium">Diversifikasi Portofolio</span>
+                  <span id="health-asset-count" class="font-bold" style="color: var(--accent-gold);">0 Aset</span>
+                </div>
+                <div class="text-xs text-muted">Tersebar di berbagai instrumen (saham, emas, reksadana, kripto).</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW 6: PENGATURAN & DATA -->
+      <section id="view-settings" class="view-panel">
+        <div class="card" style="max-width: 650px; margin-bottom: 20px;">
+          <div class="card-header">
+            <div class="card-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+              <span>Batas Anggaran (Budget Limit)</span>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Batas Pengeluaran Harian (Rp)</label>
+            <input type="number" id="setting-daily-budget" class="form-control" placeholder="200000">
+            <div class="text-xs text-muted" style="margin-top: 4px;">Peringatan akan muncul jika pengeluaran harian melebihi angka ini.</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Target Pengeluaran Bulanan (Rp)</label>
+            <input type="number" id="setting-monthly-budget" class="form-control" placeholder="5000000">
+          </div>
+          <button class="btn btn-primary" onclick="app.saveBudgetSettings()">Simpan Pengaturan</button>
+        </div>
+
+        <div class="card" style="max-width: 650px;">
+          <div class="card-header">
+            <div class="card-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <span>Backup, Ekspor & Reset Data</span>
+            </div>
+          </div>
+          <p class="text-sm text-secondary" style="margin-bottom: 16px;">
+            Semua data disimpan secara aman di browser perangkat Anda (offline-first). Anda bisa mencadangkan data kapan saja.
+          </p>
+          <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px;">
+            <button class="btn btn-secondary" onclick="app.exportCSV()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              <span>Ekspor Transaksi ke CSV (Excel)</span>
+            </button>
+            <button class="btn btn-secondary" onclick="app.exportJSON()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <span>Download Backup JSON</span>
+            </button>
+            <label class="btn btn-secondary" style="margin: 0; cursor: pointer;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              <span>Restore Backup JSON</span>
+              <input type="file" id="import-json-file" accept=".json" style="display: none;" onchange="app.importJSON(event)">
+            </label>
+          </div>
+          
+          <div style="border-top: 1px solid var(--border-color); padding-top: 16px; margin-bottom: 14px;">
+            <div class="text-xs text-muted" style="margin-bottom: 8px;">Mulai gunakan aplikasi untuk keuangan pribadi Anda:</div>
+            <button class="btn btn-primary btn-sm" onclick="app.clearRealData()">Mulai Data Kosong (Bersihkan Data Contoh)</button>
+          </div>
+
+          <div style="border-top: 1px solid var(--border-color); padding-top: 14px;">
+            <div class="text-xs text-muted" style="margin-bottom: 8px;">Kembalikan ke data demo contoh awal jika ingin simulasi lagi:</div>
+            <button class="btn btn-secondary btn-sm" onclick="app.resetDemoData()">Kembalikan Data Contoh (Reset)</button>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- FLOATING ACTION BUTTON (MOBILE ONLY) -->
+  <button class="fab-btn" onclick="app.openTxModal('expense')" title="Rp Keluar">
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+  </button>
+
+  <!-- MOBILE BOTTOM NAVIGATION -->
+  <nav class="mobile-nav">
+    <a class="mobile-nav-item active" data-view="dashboard" onclick="app.navigateTo('dashboard')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <span>Beranda</span>
+    </a>
+    <a class="mobile-nav-item" data-view="expenses" onclick="app.navigateTo('expenses')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+      <span>Pengeluaran</span>
+    </a>
+    <a class="mobile-nav-item" data-view="income" onclick="app.navigateTo('income')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+      <span>Pemasukan</span>
+    </a>
+    <a class="mobile-nav-item" data-view="portfolio" onclick="app.navigateTo('portfolio')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      <span>Portofolio</span>
+    </a>
+    <a class="mobile-nav-item" data-view="settings" onclick="app.navigateTo('settings')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      <span>Setelan</span>
+    </a>
+  </nav>
+
+  <!-- MODAL: ADD / EDIT TRANSACTION -->
+  <div id="tx-modal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="tx-modal-title" class="font-bold text-lg">Catat Transaksi</h3>
+        <button class="close-btn" onclick="app.closeTxModal()">&times;</button>
+      </div>
+
+      <form id="tx-form" onsubmit="app.handleSaveTransaction(event)">
+        <input type="hidden" id="tx-input-type" value="expense">
+
+        <!-- a. Jumlah dengan Quick Chips (+000, +10rb, +25rb, +50rb, +100rb) -->
+        <div class="form-group">
+          <label class="form-label" style="font-size: 0.95rem; font-weight: 700; color: #1e293b; margin-bottom: 8px;">Jumlah</label>
+          <div class="amount-input-box">
+            <span class="amount-prefix">Rp</span>
+            <input type="number" id="tx-input-amount" class="amount-input-raw" placeholder="0" required autofocus oninput="app.updateAmountPreview(this.value)">
+          </div>
+          <div id="tx-amount-preview" class="text-xs font-semibold text-primary" style="margin-top: 6px; display: none;"></div>
+          <div class="quick-amount-chips">
+            <button type="button" class="quick-chip quick-chip-zero" onclick="app.appendZeros('000')" title="Tambah 000 (Ribu)">+000</button>
+            <button type="button" class="quick-chip" onclick="app.addAmount(10000)">+10rb</button>
+            <button type="button" class="quick-chip" onclick="app.addAmount(25000)">+25rb</button>
+            <button type="button" class="quick-chip" onclick="app.addAmount(50000)">+50rb</button>
+            <button type="button" class="quick-chip" onclick="app.addAmount(100000)">+100rb</button>
+            <button type="button" class="quick-chip quick-chip-clear" onclick="app.clearAmount()" title="Hapus / Reset">✕</button>
+          </div>
+        </div>
+
+        <!-- b. Kategori -->
+        <div class="form-group">
+          <label class="form-label">Kategori *</label>
+          <select id="tx-input-category" class="form-control" required></select>
+        </div>
+
+        <!-- c. Keterangan -->
+        <div class="form-group">
+          <label class="form-label">Keterangan *</label>
+          <input type="text" id="tx-input-title" class="form-control" placeholder="Contoh: Makan Siang Nasi Padang" required>
+        </div>
+
+        <!-- d. Tanggal Transaksi -->
+        <div class="form-group">
+          <label class="form-label">Tanggal Transaksi *</label>
+          <input type="date" id="tx-input-date" class="form-control" required>
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-top: 22px;">
+          <button type="button" class="btn btn-secondary" style="flex: 1;" onclick="app.closeTxModal()">Batal</button>
+          <button type="submit" id="tx-submit-btn" class="btn btn-danger" style="flex: 2;">Simpan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD / EDIT INVESTMENT (RP NABUNG) -->
+  <div id="invest-modal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="invest-modal-title" class="font-bold text-lg">Rp Nabung</h3>
+        <button class="close-btn" onclick="app.closeInvestModal()">&times;</button>
+      </div>
+
+      <form id="invest-form" onsubmit="app.handleSaveInvestment(event)">
+        <input type="hidden" id="invest-input-id" value="">
+
+        <!-- 1. Instrumen / Kategori Aset -->
+        <div class="form-group">
+          <label class="form-label">Instrumen / Kategori Aset *</label>
+          <select id="invest-input-category" class="form-control" onchange="app.handleInvestCategoryChange(this.value)" required>
+            <option value="Dana Darurat">Dana Darurat</option>
+            <option value="Saham">Saham (IHSG / US)</option>
+            <option value="Reksadana">Reksa Dana</option>
+            <option value="Emas">Emas Logam Mulia</option>
+            <option value="Kripto">Aset Kripto (Crypto)</option>
+            <option value="Obligasi">Obligasi / SBN / Sukuk</option>
+          </select>
+        </div>
+
+        <!-- 2. Jumlah & Satuan (Otomatis disembunyikan khusus Dana Darurat) -->
+        <div id="invest-units-group" class="grid-2" style="display: none;">
+          <div class="form-group">
+            <label id="invest-label-units" class="form-label">Jumlah (Lot / Unit / Gram) *</label>
+            <input type="number" step="any" id="invest-input-units" class="form-control" value="1" placeholder="1" oninput="app.updateInvestPreview()">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Satuan</label>
+            <input type="text" id="invest-input-unitname" class="form-control" value="kali" readonly>
+          </div>
+        </div>
+
+        <!-- 3. Harga Beli (Ukuran & warna disamakan dengan kolom lain) -->
+        <div class="form-group">
+          <label id="invest-label-buyprice" class="form-label">Harga Beli *</label>
+          <input type="number" id="invest-input-buyprice" class="form-control" placeholder="Contoh: 1000000" required oninput="app.updateInvestAmountPreview(this.value)">
+          <div id="invest-buyprice-preview" class="text-xs font-semibold text-primary" style="margin-top: 6px; display: none;"></div>
+          <div id="invest-capital-preview" class="text-xs font-semibold" style="margin-top: 4px; color: var(--text-secondary); display: none;"></div>
+          <div class="quick-amount-chips" style="margin-top: 8px;">
+            <button type="button" class="quick-chip quick-chip-zero" onclick="app.appendInvestZeros('000')" title="Tambah 000 (Ribu)">+000</button>
+            <button type="button" class="quick-chip" onclick="app.addInvestAmount(10000)">+10rb</button>
+            <button type="button" class="quick-chip" onclick="app.addInvestAmount(25000)">+25rb</button>
+            <button type="button" class="quick-chip" onclick="app.addInvestAmount(50000)">+50rb</button>
+            <button type="button" class="quick-chip" onclick="app.addInvestAmount(100000)">+100rb</button>
+            <button type="button" class="quick-chip quick-chip-clear" onclick="app.clearInvestAmount()" title="Hapus / Reset">✕</button>
+          </div>
+        </div>
+
+        <!-- 4. Tanggal Pembelian / Nabung -->
+        <div class="form-group">
+          <label class="form-label">Tanggal Transaksi</label>
+          <input type="date" id="invest-input-date" class="form-control">
+        </div>
+
+        <!-- 5. Catatan (Opsional) -->
+        <div class="form-group">
+          <label class="form-label">Catatan / Keterangan (Opsional)</label>
+          <input type="text" id="invest-input-notes" class="form-control" placeholder="Contoh: Tabungan Dana Darurat BCA">
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-top: 24px;">
+          <button type="button" class="btn btn-secondary" style="flex: 1;" onclick="app.closeInvestModal()">Batal</button>
+          <button type="submit" class="btn btn-rp-nabung" style="flex: 2;">Simpan Rp Nabung</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION CONTAINER -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- SCRIPTS -->
+  <script src="js/api.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
