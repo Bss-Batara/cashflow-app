@@ -1,0 +1,380 @@
+/* ============================================================
+   CashFlow - css/login.css
+   Gaya overlay login.
+
+   Berkas ini berdiri sendiri dan HANYA memakai kelas berawalan
+   .cf- supaya tidak menimpa satu pun aturan dashboard di
+   css/style.css. Variabel warna memakai token yang sudah ada
+   (dengan nilai cadangan bila dimuat terpisah).
+   ============================================================ */
+
+.cf-login-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  padding: 24px 18px calc(24px + env(safe-area-inset-bottom, 0px));
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  background:
+    radial-gradient(circle at 12% 8%, rgba(225, 29, 72, 0.10) 0%, transparent 45%),
+    radial-gradient(circle at 88% 92%, rgba(190, 18, 60, 0.08) 0%, transparent 45%),
+    var(--bg-main, #fbf8f8);
+}
+
+.cf-login-screen[hidden] {
+  display: none !important;
+}
+
+/* Atribut [hidden] harus menang atas display:grid pada .cf-login-field */
+.cf-login-screen [hidden] {
+  display: none !important;
+}
+
+.cf-login-card {
+  width: 100%;
+  max-width: 400px;
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border-color, #fecdd3);
+  border-radius: var(--radius-xl, 24px);
+  box-shadow: var(--shadow-lg, 0 12px 32px -4px rgba(190, 18, 60, 0.16));
+  padding: 30px 26px 26px;
+  animation: cf-login-rise 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes cf-login-rise {
+  from { opacity: 0; transform: translateY(14px) scale(0.985); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ---------------------------------- Merek --------------------------------- */
+.cf-login-brand {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  margin-bottom: 24px;
+}
+
+.cf-login-logo {
+  flex: 0 0 auto;
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: var(--primary-gradient, linear-gradient(135deg, #e11d48 0%, #be123c 60%, #9f1239 100%));
+  color: #ffffff;
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  box-shadow: 0 6px 16px -4px rgba(190, 18, 60, 0.45);
+}
+
+.cf-login-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text-primary, #0f172a);
+  line-height: 1.2;
+}
+
+.cf-login-subtitle {
+  margin: 3px 0 0;
+  font-size: 12.5px;
+  color: var(--text-secondary, #475569);
+  line-height: 1.45;
+}
+
+/* ---------------------------------- Formulir ------------------------------ */
+.cf-login-form {
+  display: grid;
+  gap: 15px;
+  margin: 0;
+}
+
+.cf-login-field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.cf-login-label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-secondary, #475569);
+}
+
+.cf-login-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  font: inherit;
+  font-size: 14.5px;
+  color: var(--text-primary, #0f172a);
+  background: var(--bg-input, #ffffff);
+  border: 1px solid var(--border-color, #fecdd3);
+  border-radius: var(--radius-md, 12px);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.cf-login-input::placeholder {
+  color: var(--text-muted, #94a3b8);
+}
+
+.cf-login-input:focus {
+  outline: none;
+  border-color: var(--border-focus, #e11d48);
+  box-shadow: 0 0 0 3px rgba(225, 29, 72, 0.14);
+}
+
+.cf-login-input[aria-invalid="true"] {
+  border-color: var(--expense-color, #e11d48);
+}
+
+.cf-login-input:disabled {
+  background: var(--bg-card-subtle, #fff5f5);
+  color: var(--text-muted, #94a3b8);
+}
+
+.cf-login-password-wrap {
+  position: relative;
+  display: block;
+}
+
+.cf-login-password-wrap .cf-login-input {
+  padding-right: 48px;
+}
+
+.cf-login-toggle {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm, 8px);
+  background: transparent;
+  color: var(--text-muted, #94a3b8);
+  cursor: pointer;
+  transition: color 0.18s ease, background-color 0.18s ease;
+}
+
+.cf-login-toggle:hover {
+  color: var(--text-red, #be123c);
+  background: var(--primary-subtle, #ffe4e6);
+}
+
+.cf-login-toggle:focus-visible {
+  outline: 2px solid var(--border-focus, #e11d48);
+  outline-offset: 1px;
+}
+
+.cf-login-toggle svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+/* Pesan galat */
+.cf-login-error {
+  margin: 0;
+  min-height: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--expense-color, #e11d48);
+  line-height: 1.45;
+}
+
+.cf-login-error:empty {
+  display: none;
+}
+
+/* Tombol utama */
+.cf-login-submit {
+  position: relative;
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 13px 18px;
+  font: inherit;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #ffffff;
+  background: var(--primary, #be123c);
+  border: 0;
+  border-radius: var(--radius-md, 12px);
+  cursor: pointer;
+  transition: background-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+  box-shadow: 0 6px 16px -6px rgba(190, 18, 60, 0.55);
+}
+
+.cf-login-submit:hover:not(:disabled) {
+  background: var(--primary-hover, #9f1239);
+}
+
+.cf-login-submit:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.cf-login-submit:focus-visible {
+  outline: 2px solid var(--border-focus, #e11d48);
+  outline-offset: 2px;
+}
+
+.cf-login-submit:disabled {
+  opacity: 0.72;
+  cursor: progress;
+}
+
+/* Label di dalam tombol (harus terpisah dari .cf-login-label milik field) */
+.cf-login-btn-label {
+  color: inherit;
+  font-size: inherit;
+  font-weight: 700;
+  line-height: 1;
+  text-align: center;
+}
+
+.cf-login-submit .cf-login-spinner {
+  display: none;
+  width: 15px;
+  height: 15px;
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: cf-login-spin 0.7s linear infinite;
+}
+
+.cf-login-submit[data-busy="true"] .cf-login-spinner {
+  display: block;
+}
+
+@keyframes cf-login-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Tautan antar-mode */
+.cf-login-switch {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  color: var(--text-secondary, #475569);
+  text-align: center;
+}
+
+.cf-login-switch button {
+  padding: 0;
+  font: inherit;
+  font-weight: 700;
+  color: var(--text-red, #be123c);
+  background: none;
+  border: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.cf-login-switch button:focus-visible {
+  outline: 2px solid var(--border-focus, #e11d48);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Catatan kaki */
+.cf-login-foot {
+  margin: 20px 0 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-subtle, #fee2e2);
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--text-muted, #94a3b8);
+  text-align: center;
+}
+
+.cf-login-foot strong {
+  color: var(--text-secondary, #475569);
+  font-weight: 600;
+}
+
+/* Peringatan konteks tidak aman (hash lemah) */
+.cf-login-warn {
+  margin: 0 0 14px;
+  padding: 9px 12px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: #7c2d12;
+  background: var(--warning-subtle, #fef3c7);
+  border: 1px solid rgba(217, 119, 6, 0.35);
+  border-radius: var(--radius-sm, 8px);
+}
+
+.cf-login-warn[hidden] {
+  display: none !important;
+}
+
+/* --------------------------- Kunci halaman di belakang -------------------- */
+body.cf-locked {
+  overflow: hidden;
+}
+
+body.cf-locked .app-container {
+  pointer-events: none;
+  user-select: none;
+  filter: blur(2px) saturate(0.85);
+  transition: filter 0.25s ease;
+}
+
+/* --------------------------------- Responsif ----------------------------- */
+@media (max-width: 420px) {
+  .cf-login-screen {
+    padding: 16px 12px calc(16px + env(safe-area-inset-bottom, 0px));
+    place-items: center;
+  }
+
+  .cf-login-card {
+    padding: 24px 18px 20px;
+    border-radius: var(--radius-lg, 18px);
+  }
+
+  .cf-login-title {
+    font-size: 18px;
+  }
+
+  .cf-login-logo {
+    width: 42px;
+    height: 42px;
+    font-size: 16px;
+  }
+}
+
+@media (max-height: 520px) {
+  .cf-login-screen {
+    place-items: start center;
+  }
+}
+
+/* Hormati preferensi gerak minimal */
+@media (prefers-reduced-motion: reduce) {
+  .cf-login-card,
+  .cf-login-submit,
+  .cf-login-input {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* Cetak: jangan pernah tampilkan lapisan login */
+@media print {
+  .cf-login-screen {
+    display: none !important;
+  }
+}
