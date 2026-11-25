@@ -3,6 +3,18 @@
  * Categories are owner-scoped and can be deactivated without deletion.
  */
 function seedDefaultCategories() {
+  const auth = requireAuthorizedUser();
+  return seedDefaultCategoriesFor_(auth.email);
+}
+
+/**
+ * Menyiapkan kategori bawaan untuk satu pemilik. Dipanggil saat register/login
+ * supaya akun baru langsung bisa menyimpan transaksi (categoryId wajib ada).
+ */
+function seedDefaultCategoriesFor_(ownerId) {
+  const owner = String(ownerId || '').trim();
+  if (!owner) throw new Error('ownerId is required.');
+
   const defaults = [
     ['income-salary', 'income', 'Gaji', 'Gaji', '#22c55e', 'wallet'],
     ['income-freelance', 'income', 'Freelance', 'Freelance', '#16a34a', 'briefcase'],
@@ -17,18 +29,17 @@ function seedDefaultCategories() {
     ['investment-general', 'investment', 'Investasi', 'Investasi', '#06b6d4', 'trending-up']
   ];
 
-  const auth = requireAuthorizedUser();
   const spreadsheet = getConfiguredSpreadsheet_();
   const sheet = getRequiredSheet_('Categories', spreadsheet);
   const values = sheet.getDataRange().getValues();
   const existing = new Set(values.slice(1)
-    .filter(row => row[1] === auth.email)
+    .filter(row => row[1] === owner)
     .map(row => row[0]));
   const now = new Date();
   const rows = defaults
     .filter(item => !existing.has(item[0]))
     .map((item, index) => [
-      item[0], auth.email, item[1], item[2], item[3], item[4], item[5],
+      item[0], owner, item[1], item[2], item[3], item[4], item[5],
       index, true, now, now
     ]);
 

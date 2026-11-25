@@ -317,6 +317,13 @@ function loginUser(input) {
 }
 
 function cashflowIssueToken_(user) {
+  // Pastikan pemilik punya kategori bawaan agar bisa menyimpan transaksi.
+  try {
+    seedDefaultCategoriesFor_(user.ownerId || user.username);
+  } catch (error) {
+    Logger.log('Category seed skipped: ' + error.message);
+  }
+
   var tokens = readCashflowTokens_();
   var token = (Utilities.getUuid() + Utilities.getUuid()).replace(/-/g, '');
   var expiresAt = Date.now() + CASHFLOW_TOKEN_TTL_MS;

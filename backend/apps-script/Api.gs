@@ -98,10 +98,10 @@ function dispatchApiAction_(action, request) {
         authenticated: Boolean(CASHFLOW_REQUEST_IDENTITY)
       };
     case 'register':
-      requirePost_(request);
+      // GET diizinkan: frontend memakai JSONP (respons POST tak terbaca lintas-origin).
       return registerUser(payload);
     case 'login':
-      requirePost_(request);
+      // GET diizinkan: frontend memakai JSONP.
       return loginUser(payload);
     case 'logout':
       requirePost_(request);

@@ -4,7 +4,7 @@
  * localStorage dipakai sebagai salinan kerja/offline.
  */
 const CASHFLOW_API_URL =
-  'https://script.google.com/macros/s/AKfycbxeY40_Wg8-dBlkSvHCov7fLgYrSE8130Dy2sw-0ZQGpo0_XDGs5WjS8l5BZnWHB5L6ag/exec';
+  'https://script.google.com/macros/s/AKfycbwNDh1yP1ErkKPjEkGcN28YO2AnUA8Mso_FyENR7MPEiHfxcY8fNydDe-fN8KA48w85/exec';
 
 const CASHFLOW_API_TIMEOUT_MS = 10000;
 
