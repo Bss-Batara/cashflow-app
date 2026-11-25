@@ -1252,3 +1252,24 @@ body {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* Perbaikan Tampilan Mobile agar tombol tidak terpotong */
+@media (max-width: 500px) {
+  .mobile-header {
+    flex-wrap: wrap !important; /* Izinkan turun ke baris baru jika layar sempit */
+    gap: 10px;
+  }
+  
+  .mobile-header > div:last-child {
+    width: 100%; /* Paksa wadah tombol mengambil lebar penuh */
+    justify-content: space-between; /* Bagi rata ketiga tombol */
+  }
+  
+  .mobile-header .btn-sm {
+    flex: 1; /* Biarkan setiap tombol mengisi ruang yang tersedia */
+    padding: 8px 4px !important;
+    font-size: 0.75rem !important; /* Kecilkan sedikit teksnya */
+    display: flex;
+    justify-content: center;
+  }
+}
