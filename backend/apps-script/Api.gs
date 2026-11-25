@@ -42,7 +42,7 @@ function handleApiRequest_(request) {
 
     // Aksi publik tidak butuh identitas; aksi lain memakai token login
     // (username/password) atau akun Google yang ada di allowlist.
-    if (['health', 'login', 'register'].indexOf(action) === -1) {
+    if (['health', 'login'].indexOf(action) === -1) {
       CASHFLOW_REQUEST_IDENTITY = resolveApiIdentity_(request);
     }
 
@@ -97,9 +97,8 @@ function dispatchApiAction_(action, request) {
         schemaVersion: getCashflowConfig_().schemaVersion,
         authenticated: Boolean(CASHFLOW_REQUEST_IDENTITY)
       };
-    case 'register':
-      // GET diizinkan: frontend memakai JSONP (respons POST tak terbaca lintas-origin).
-      return registerUser(payload);
+    // Pendaftaran publik ditutup. Akun dibuat manual oleh administrator.
+    // case 'register': return registerUser(payload);
     case 'login':
       // GET diizinkan: frontend memakai JSONP.
       return loginUser(payload);

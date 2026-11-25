@@ -386,3 +386,31 @@ function resolveApiIdentity_(request) {
 
   throw new Error('Access denied. Silakan login terlebih dahulu.');
 }
+
+/**
+ * Menghapus akun dan seluruh tokennya. Dijalankan administrator lewat
+ * clasp run revokeCashflowAccount -p '["username"]'.
+ */
+function revokeCashflowAccount(username) {
+  var key = cashflowNormalizeUsername_(username);
+  if (!key) throw new Error('username is required.');
+
+  var users = readCashflowUsers_();
+  var existed = Object.prototype.hasOwnProperty.call(users, key);
+  if (existed) {
+    delete users[key];
+    writeCashflowUsers_(users);
+  }
+
+  var tokens = readCashflowTokens_();
+  var removed = 0;
+  Object.keys(tokens).forEach(function (token) {
+    if (cashflowNormalizeUsername_(tokens[token].username) === key) {
+      delete tokens[token];
+      removed += 1;
+    }
+  });
+  writeCashflowTokens_(tokens);
+
+  return { username: key, userRemoved: existed, tokensRemoved: removed };
+}
