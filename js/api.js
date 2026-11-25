@@ -6,7 +6,8 @@
 const CASHFLOW_API_URL =
   'https://script.google.com/macros/s/AKfycbwNDh1yP1ErkKPjEkGcN28YO2AnUA8Mso_FyENR7MPEiHfxcY8fNydDe-fN8KA48w85/exec';
 
-const CASHFLOW_API_TIMEOUT_MS = 10000;
+// Cold start Apps Script bisa 10-15 detik pada permintaan pertama.
+const CASHFLOW_API_TIMEOUT_MS = 25000;
 
 const CashflowApi = {
   token_: '',
