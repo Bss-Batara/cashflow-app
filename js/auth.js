@@ -140,9 +140,15 @@
     }
   }
 
+  function setSessionLabel(username) {
+    const node = document.getElementById('cf-session-user');
+    if (node) node.textContent = username || '—';
+  }
+
   function finishLogin(data) {
     const session = writeSession(data);
     window.CashflowApi.setToken(session.token);
+    setSessionLabel(session.username);
     setError('');
     if (el.password) el.password.value = '';
     if (el.confirm) el.confirm.value = '';
@@ -178,7 +184,11 @@
       const data = await window.CashflowApi.get(isRegister ? 'register' : 'login', params);
       finishLogin(data);
     } catch (error) {
-      setError(error && error.message ? error.message : 'Gagal menghubungi server.');
+      const message = String((error && error.message) || '');
+      const notDeployed = /Unsupported action|not found|tidak dikenal/i.test(message);
+      setError(notDeployed
+        ? 'Backend GAS belum memuat login. Deploy ulang Apps Script (versi baru) lalu coba lagi.'
+        : (error && error.message ? error.message : 'Gagal menghubungi server.'));
     } finally {
       setBusy(false);
     }
@@ -247,16 +257,52 @@
     if (el.warn) el.warn.hidden = true;
 
     const session = readSession();
-    if (session) {
-      window.CashflowApi.setToken(session.token);
-      unlockApp();
-      hideOverlay();
-    } else {
+    if (!session) {
       lockApp();
       applyMode('login');
       showOverlay();
+      startWatch();
+      return;
     }
 
+    // Token dari sessionStorage TIDAK dipercaya begitu saja: verifikasi ke
+    // server agar sesi lama/basi tidak membuka aplikasi dengan data lokal.
+    lockApp();
+    applyMode('login');
+    showOverlay();
+    window.CashflowApi.setToken(session.token);
+
+    window.CashflowApi.get('me')
+      .then(function (user) {
+        if (user && user.username) {
+          writeSession({ token: session.token, username: user.username, expiresAt: user.expiresAt });
+          setSessionLabel(user.username);
+        }
+        unlockApp();
+        hideOverlay();
+        notify('login');
+      })
+      .catch(function (error) {
+        const message = String((error && error.message) || '');
+        const offline = /timed out|could not be reached|Failed to fetch|NetworkError/i.test(message);
+
+        if (offline) {
+          // Backend tidak terjangkau: data lokal tetap boleh dibuka.
+          unlockApp();
+          hideOverlay();
+          notify('login');
+          return;
+        }
+
+        clearSession();
+        window.CashflowApi.setToken('');
+        setError('Sesi tidak valid atau sudah berakhir. Silakan masuk lagi.');
+      });
+
+    startWatch();
+  }
+
+  function startWatch() {
     window.addEventListener('cashflow:auth', function (event) {
       if (event.detail && event.detail.type === 'login' && window.app) {
         if (typeof window.app.syncFromSpreadsheet === 'function') {

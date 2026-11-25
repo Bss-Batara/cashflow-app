@@ -112,10 +112,15 @@ class FinApp {
       this.render();
     });
 
-    // Tarik data terbaru dari Spreadsheet saat aplikasi pertama dibuka.
-    // Berjalan di latar belakang: dashboard sudah ter-render dari localStorage,
-    // lalu diperbarui lagi setelah data server tiba.
-    this.syncFromSpreadsheet();
+    // Selaraskan antar perangkat: tarik data Spreadsheet berkala dan saat tab aktif.
+    const refresh = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (!window.cashflowAuth || !window.cashflowAuth.isAuthenticated()) return;
+      this.syncFromSpreadsheet({ silent: true });
+    };
+    window.setInterval(refresh, 30000);
+    document.addEventListener('visibilitychange', refresh);
+    window.addEventListener('focus', refresh);
 
     // Resize event for charts
     window.addEventListener('resize', () => {
@@ -729,7 +734,7 @@ class FinApp {
    * localStorage, lalu render ulang dashboard.
    * Bila server tidak terjangkau, data lokal dibiarkan apa adanya.
    */
-  async syncFromSpreadsheet() {
+  async syncFromSpreadsheet(options = {}) {
     const api = window.CashflowApi;
     if (!api || typeof api.get !== 'function' || !api.enabled()) return null;
     if (!api.getToken()) return null;
@@ -750,6 +755,12 @@ class FinApp {
       return transactions;
     } catch (error) {
       console.warn('[CashFlow] Sinkronisasi Spreadsheet gagal, memakai data lokal:', error.message);
+      if (!options.silent) {
+        const notDeployed = /Unsupported action|not found|tidak dikenal/i.test(String(error.message || ''));
+        this.showToast(notDeployed
+          ? 'Backend GAS belum diperbarui — deploy versi baru dulu'
+          : 'Gagal memuat data dari Spreadsheet');
+      }
       return null;
     }
   }
@@ -759,27 +770,36 @@ class FinApp {
    * Spreadsheet. Bila pengiriman gagal, data lokal tetap tersimpan.
    */
   async saveTransactionWithSync(tx) {
-    window.financeStore.saveTransactions([
-      {
-        id: 'tx-' + Date.now(),
-        type: tx.type,
-        title: tx.title,
-        amount: parseFloat(tx.amount) || 0,
-        category: tx.category,
-        date: tx.date || new Date().toISOString().split('T')[0],
-        wallet: tx.wallet || 'Utama',
-        note: tx.note || ''
-      },
-      ...window.financeStore.getTransactions()
-    ]);
+    const localTx = {
+      id: 'tx-' + Date.now(),
+      type: tx.type,
+      title: tx.title,
+      amount: parseFloat(tx.amount) || 0,
+      category: tx.category,
+      date: tx.date || new Date().toISOString().split('T')[0],
+      wallet: tx.wallet || 'Utama',
+      note: tx.note || ''
+    };
+    window.financeStore.saveTransactions([localTx, ...window.financeStore.getTransactions()]);
 
-    if (!window.CashflowApi || !window.CashflowApi.enabled()) {
-      return { synced: true };
+    if (!window.CashflowApi || !window.CashflowApi.enabled() || !window.CashflowApi.getToken()) {
+      return { synced: false, error: new Error('Belum login') };
     }
 
     try {
       // addRemoteTransaction_ juga menyegarkan localStorage dari Spreadsheet.
       await window.financeStore.addRemoteTransaction_(tx);
+
+      const found = window.financeStore.getTransactions().some(item =>
+        String(item.title || '') === String(tx.title || '') &&
+        Number(item.amount) === Number(localTx.amount)
+      );
+
+      if (!found) {
+        // Server menolak diam-diam: kembalikan catatan lokal agar tidak hilang.
+        window.financeStore.saveTransactions([localTx, ...window.financeStore.getTransactions()]);
+        return { synced: false, error: new Error('Server tidak menyimpan transaksi') };
+      }
       return { synced: true };
     } catch (error) {
       console.warn('[CashFlow] Transaksi tersimpan lokal, gagal sinkron ke Spreadsheet:', error.message);

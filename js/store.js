@@ -463,7 +463,7 @@ window.financeStore = new FinanceStore();
     return localAddInvestment.call(this, inv);
   };
 
-  if (window.CashflowApi?.enabled()) {
+  if (window.CashflowApi?.enabled() && window.CashflowApi.getToken()) {
     setTimeout(() => window.financeStore.syncInvestmentsFromApi_().catch(error => {
       console.error('Failed to sync investments with Cashflow API:', error);
     }), 0);
