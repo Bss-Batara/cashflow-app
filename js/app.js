@@ -712,6 +712,22 @@ class FinApp {
   }
 
   // --- Sinkronisasi Spreadsheet ---
+  /** Tanggal dari Spreadsheet bisa berupa ISO UTC; kembalikan YYYY-MM-DD WIB. */
+  toIsoDate_(value) {
+    if (!value) return '';
+    const text = String(value);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return text;
+    const parsed = new Date(text);
+    if (Number.isNaN(parsed.getTime())) return text.slice(0, 10);
+    try {
+      return new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit'
+      }).format(parsed);
+    } catch (error) {
+      return text.slice(0, 10);
+    }
+  }
+
   /** Bentuk record Spreadsheet (amountMinor, categoryId) -> bentuk localStorage. */
   mapSpreadsheetTransactions_(items, categoryNames) {
     return (items || []).map(tx => ({
@@ -720,7 +736,7 @@ class FinApp {
       title: tx.title,
       amount: Number(tx.amountMinor) || 0,
       category: categoryNames.get(tx.categoryId) || tx.categoryId,
-      date: tx.transactionDate,
+      date: this.toIsoDate_(tx.transactionDate),
       wallet: tx.wallet,
       note: tx.note,
       status: tx.status,
