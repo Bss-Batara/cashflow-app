@@ -63,6 +63,15 @@
                  autocomplete="new-password" placeholder="Ulangi password">
         </div>
 
+        <div class="cf-login-field" id="cf-login-email-field" hidden>
+          <label class="cf-login-label" for="cf-login-email">Email Google (opsional)</label>
+          <input id="cf-login-email" class="cf-login-input" type="email" name="email"
+                 autocomplete="email" spellcheck="false" placeholder="nama@gmail.com">
+          <div class="text-xs text-muted" style="margin-top: 4px;">
+            Isi email akun Google Anda agar transaksi lama di Spreadsheet tetap terlihat.
+          </div>
+        </div>
+
         <p id="cf-login-error" class="cf-login-error" role="alert" aria-live="assertive"></p>
 
         <button type="submit" id="cf-login-submit" class="cf-login-submit" data-busy="false">
@@ -587,8 +596,8 @@
           </div>
 
           <div style="border-top: 1px solid var(--border-color); padding-top: 14px;">
-            <div class="text-xs text-muted" style="margin-bottom: 8px;">Kembalikan ke data demo contoh awal jika ingin simulasi lagi:</div>
-            <button class="btn btn-secondary btn-sm" onclick="app.resetDemoData()">Kembalikan Data Contoh (Reset)</button>
+            <div class="text-xs text-muted" style="margin-bottom: 8px;">Ambil ulang data terbaru dari Google Spreadsheet:</div>
+            <button class="btn btn-secondary btn-sm" onclick="app.resetDemoData()">Muat Ulang dari Spreadsheet</button>
           </div>
         </div>
 

@@ -38,8 +38,14 @@ function handleApiRequest_(request) {
   const requestId = Utilities.getUuid();
 
   try {
-    requireAuthorizedUser();
     const action = getApiAction_(request);
+
+    // Aksi publik tidak butuh identitas; aksi lain memakai token login
+    // (username/password) atau akun Google yang ada di allowlist.
+    if (['health', 'login', 'register'].indexOf(action) === -1) {
+      CASHFLOW_REQUEST_IDENTITY = resolveApiIdentity_(request);
+    }
+
     const result = dispatchApiAction_(action, request);
 
     return apiJsonResponse_({
@@ -89,8 +95,19 @@ function dispatchApiAction_(action, request) {
       return {
         service: 'cashflow-api',
         schemaVersion: getCashflowConfig_().schemaVersion,
-        authenticated: true
+        authenticated: Boolean(CASHFLOW_REQUEST_IDENTITY)
       };
+    case 'register':
+      requirePost_(request);
+      return registerUser(payload);
+    case 'login':
+      requirePost_(request);
+      return loginUser(payload);
+    case 'logout':
+      requirePost_(request);
+      return logoutUser(payload.token || source.token);
+    case 'me':
+      return currentUser(payload.token || source.token);
     case 'listTransactions':
       return listTransactions({
         includeVoided: toBoolean_(payload.includeVoided)

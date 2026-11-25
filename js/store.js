@@ -1,6 +1,6 @@
 /**
  * FinFlow - State & Data Store
- * Persistent storage via LocalStorage with initial Indonesian financial seed data
+ * Persistent storage via LocalStorage (tanpa data contoh)
  */
 
 const STORAGE_KEYS = {
@@ -23,202 +23,7 @@ const getRelativeDate = (dayOffset = 0) => {
   return d.toISOString().split('T')[0];
 };
 
-const DEFAULT_TRANSACTIONS = [
-  // Income
-  {
-    id: 'tx-1',
-    type: 'income',
-    title: 'Gaji Pokok Bulanan',
-    amount: 12500000,
-    category: 'Gaji',
-    date: getRelativeDate(-4),
-    wallet: 'BCA Utama',
-    note: 'Gaji bulanan kantor'
-  },
-  {
-    id: 'tx-2',
-    type: 'income',
-    title: 'Proyek Freelance UI/UX',
-    amount: 3800000,
-    category: 'Freelance',
-    date: getRelativeDate(-2),
-    wallet: 'Mandiri',
-    note: 'Pembayaran termin 1 klien web app'
-  },
-  {
-    id: 'tx-3',
-    type: 'income',
-    title: 'Dividen Saham BBCA',
-    amount: 450000,
-    category: 'Investasi',
-    date: getRelativeDate(-6),
-    wallet: 'RDN Sekuritas',
-    note: 'Dividen interim'
-  },
 
-  // Daily Expenses
-  {
-    id: 'tx-4',
-    type: 'expense',
-    title: 'Makan Siang & Es Kopi Susu',
-    amount: 48000,
-    category: 'Makanan & Minuman',
-    date: getRelativeDate(0),
-    wallet: 'GoPay',
-    note: 'Ayam Geprek + Kopi Kenangan'
-  },
-  {
-    id: 'tx-5',
-    type: 'expense',
-    title: 'Bensin & Parkir Kantor',
-    amount: 35000,
-    category: 'Transportasi',
-    date: getRelativeDate(0),
-    wallet: 'Cash',
-    note: 'Pertalite + parkir seharian'
-  },
-  {
-    id: 'tx-6',
-    type: 'expense',
-    title: 'Makan Malam Seafood',
-    amount: 85000,
-    category: 'Makanan & Minuman',
-    date: getRelativeDate(-1),
-    wallet: 'BCA Utama',
-    note: 'Makan malam sama kawan'
-  },
-  {
-    id: 'tx-7',
-    type: 'expense',
-    title: 'Belanja Kebutuhan Mingguan',
-    amount: 340000,
-    category: 'Kebutuhan Harian',
-    date: getRelativeDate(-2),
-    wallet: 'BCA Utama',
-    note: 'Superindo bahan masak & buah'
-  },
-  {
-    id: 'tx-8',
-    type: 'expense',
-    title: 'Tagihan Internet WiFi Rumah',
-    amount: 385000,
-    category: 'Tagihan & Utilitas',
-    date: getRelativeDate(-3),
-    wallet: 'Mandiri',
-    note: 'Indihome 50 Mbps'
-  },
-  {
-    id: 'tx-9',
-    type: 'expense',
-    title: 'Topup Pulsa & Kuota Darurat',
-    amount: 75000,
-    category: 'Tagihan & Utilitas',
-    date: getRelativeDate(-4),
-    wallet: 'GoPay',
-    note: 'Telkomsel kuota data 25GB'
-  },
-  {
-    id: 'tx-10',
-    type: 'expense',
-    title: 'Langganan Netflix & Spotify',
-    amount: 110000,
-    category: 'Hiburan',
-    date: getRelativeDate(-5),
-    wallet: 'BCA Utama',
-    note: 'Autodebet bulanan'
-  },
-  {
-    id: 'tx-11',
-    type: 'expense',
-    title: 'Beli Buku Pemrograman',
-    amount: 165000,
-    category: 'Edukasi & Belajar',
-    date: getRelativeDate(-6),
-    wallet: 'ShopeePay',
-    note: 'Gramedia Online'
-  }
-];
-
-const DEFAULT_INVESTMENTS = [
-  {
-    id: 'inv-1',
-    name: 'Bank Central Asia Tbk',
-    code: 'BBCA',
-    category: 'Saham',
-    buyPrice: 9800,
-    currentPrice: 10450,
-    units: 10, // 10 lot = 1000 lembar
-    unitName: 'lot',
-    unitMultiplier: 100, // 1 lot = 100 lembar
-    dateBought: '2024-03-15',
-    notes: 'Saham core portfolio dividen & growth'
-  },
-  {
-    id: 'inv-2',
-    name: 'Bank Rakyat Indonesia Tbk',
-    code: 'BBRI',
-    category: 'Saham',
-    buyPrice: 4700,
-    currentPrice: 5100,
-    units: 15,
-    unitName: 'lot',
-    unitMultiplier: 100,
-    dateBought: '2024-04-10',
-    notes: 'Saham perbankan BUMN'
-  },
-  {
-    id: 'inv-3',
-    name: 'Sucorinvest Sharia Money Market Fund',
-    code: 'SSMMF',
-    category: 'Reksadana',
-    buyPrice: 1520,
-    currentPrice: 1610,
-    units: 5000,
-    unitName: 'unit',
-    unitMultiplier: 1,
-    dateBought: '2024-01-20',
-    notes: 'Dana darurat likuid yield stabil'
-  },
-  {
-    id: 'inv-4',
-    name: 'Emas Fisik Antam Certicard',
-    code: 'GOLD-ANTAM',
-    category: 'Emas',
-    buyPrice: 1250000,
-    currentPrice: 1490000,
-    units: 10,
-    unitName: 'gram',
-    unitMultiplier: 1,
-    dateBought: '2023-11-05',
-    notes: 'Hedging inflasi jangka panjang'
-  },
-  {
-    id: 'inv-5',
-    name: 'Bitcoin (BTC)',
-    code: 'BTC',
-    category: 'Kripto',
-    buyPrice: 920000000,
-    currentPrice: 1450000000,
-    units: 0.0065,
-    unitName: 'BTC',
-    unitMultiplier: 1,
-    dateBought: '2024-02-12',
-    notes: 'DCA aset kripto via exchange teregulasi'
-  },
-  {
-    id: 'inv-6',
-    name: 'Sukuk Ritel SR020',
-    code: 'SR020',
-    category: 'Obligasi',
-    buyPrice: 1000000,
-    currentPrice: 1000000,
-    units: 10,
-    unitName: 'unit',
-    unitMultiplier: 1,
-    dateBought: '2024-03-01',
-    notes: 'Kupon 6.3% per tahun dibayar tiap bulan'
-  }
-];
 
 class FinanceStore {
   constructor() {
@@ -228,16 +33,16 @@ class FinanceStore {
 
   init() {
     if (!localStorage.getItem(STORAGE_KEYS.TRANSACTIONS)) {
-      this.saveTransactions(DEFAULT_TRANSACTIONS);
+      this.saveTransactions([]);
     }
     if (!localStorage.getItem(STORAGE_KEYS.INVESTMENTS)) {
-      this.saveInvestments(DEFAULT_INVESTMENTS);
+      this.saveInvestments([]);
     }
     if (!localStorage.getItem(STORAGE_KEYS.SETTINGS)) {
       this.saveSettings(DEFAULT_SETTINGS);
     }
 
-    if (window.CashflowApi?.enabled()) {
+    if (window.CashflowApi?.enabled() && window.CashflowApi.getToken()) {
       this.syncFromApi().catch(error => {
         console.error('Failed to sync with Cashflow API:', error);
       });
@@ -274,7 +79,7 @@ class FinanceStore {
   getTransactions() {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.TRANSACTIONS);
-      return data ? JSON.parse(data) : DEFAULT_TRANSACTIONS;
+      return data ? JSON.parse(data) : [];
     } catch (e) {
       console.error('Failed to load transactions:', e);
       return [];
@@ -345,7 +150,7 @@ class FinanceStore {
   getInvestments() {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.INVESTMENTS);
-      return data ? JSON.parse(data) : DEFAULT_INVESTMENTS;
+      return data ? JSON.parse(data) : [];
     } catch (e) {
       console.error('Failed to load investments:', e);
       return [];
@@ -524,8 +329,9 @@ class FinanceStore {
   }
 
   resetData() {
-    this.saveTransactions(DEFAULT_TRANSACTIONS);
-    this.saveInvestments(DEFAULT_INVESTMENTS);
+    // Tidak ada lagi data contoh: reset berarti mengosongkan data lokal.
+    this.saveTransactions([]);
+    this.saveInvestments([]);
     this.saveSettings(DEFAULT_SETTINGS);
   }
 
@@ -658,7 +464,7 @@ window.financeStore = new FinanceStore();
   };
 
   if (window.CashflowApi?.enabled()) {
-    setTimeout(() => this.syncInvestmentsFromApi_().catch(error => {
+    setTimeout(() => window.financeStore.syncInvestmentsFromApi_().catch(error => {
       console.error('Failed to sync investments with Cashflow API:', error);
     }), 0);
   }
