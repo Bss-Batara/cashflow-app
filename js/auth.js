@@ -97,7 +97,7 @@
     el.submit.disabled = busy;
     el.submit.dataset.busy = busy ? 'true' : 'false';
     const label = el.submit.querySelector('.cf-login-btn-label');
-    if (label) label.textContent = busy ? 'Memproses…' : state.mode === 'setup' ? 'Daftar' : 'Masuk';
+    if (label) label.textContent = busy ? 'Memproses…' : (state.mode === 'register' ? 'Daftar' : 'Masuk');
   }
 
   function applyMode(mode) {
