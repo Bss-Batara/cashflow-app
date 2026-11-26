@@ -97,6 +97,8 @@ function dispatchApiAction_(action, request) {
         schemaVersion: getCashflowConfig_().schemaVersion,
         authenticated: Boolean(CASHFLOW_REQUEST_IDENTITY)
       };
+    case 'changePassword':
+      return changeCashflowPassword(payload.token || source.token, payload.currentPassword, payload.newPassword);
     // Pendaftaran publik ditutup. Akun dibuat manual oleh administrator.
     // case 'register': return registerUser(payload);
     case 'login':

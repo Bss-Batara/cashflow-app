@@ -620,6 +620,15 @@
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 17l5-5-5-5M20 12H9M12 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h6"/></svg>
             <span>Keluar dari Akun</span>
           </button>
+
+          <form id="cf-change-password" style="margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border-color); display: grid; gap: 10px; max-width: 340px;">
+            <div class="text-sm text-secondary">Ganti password</div>
+            <input id="cf-pw-current" class="form-control" type="password" placeholder="Password saat ini" autocomplete="current-password">
+            <input id="cf-pw-new" class="form-control" type="password" placeholder="Password baru (min. 8 karakter)" autocomplete="new-password">
+            <input id="cf-pw-confirm" class="form-control" type="password" placeholder="Ulangi password baru" autocomplete="new-password">
+            <p id="cf-pw-error" class="text-xs" style="color: var(--expense-color); margin: 0;"></p>
+            <button type="submit" class="btn btn-secondary btn-sm" style="justify-self: start;">Simpan password</button>
+          </form>
         </div>
       </section>
 

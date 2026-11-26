@@ -244,6 +244,50 @@
         }
       });
     }
+
+    const passwordForm = document.getElementById('cf-change-password');
+    if (passwordForm) {
+      passwordForm.addEventListener('submit', function (event) {
+        event.preventDefault();
+        changePassword();
+      });
+    }
+  }
+
+  async function changePassword() {
+    const current = document.getElementById('cf-pw-current');
+    const next = document.getElementById('cf-pw-new');
+    const confirm = document.getElementById('cf-pw-confirm');
+    const errorNode = document.getElementById('cf-pw-error');
+    const session = readSession();
+
+    const showError = (message) => {
+      if (errorNode) errorNode.textContent = message || '';
+      if (window.app && typeof window.app.showToast === 'function' && message) {
+        window.app.showToast(message);
+      }
+    };
+
+    if (!session || !session.token) return showError('Sesi tidak ditemukan. Silakan masuk lagi.');
+    if (!current.value) return showError('Isi password saat ini.');
+    if (next.value.length < 8) return showError('Password baru minimal 8 karakter.');
+    if (next.value !== confirm.value) return showError('Konfirmasi password baru tidak sama.');
+
+    try {
+      await window.CashflowApi.get('changePassword', {
+        currentPassword: current.value,
+        newPassword: next.value
+      });
+      showError('');
+      current.value = '';
+      next.value = '';
+      confirm.value = '';
+      if (window.app && typeof window.app.showToast === 'function') {
+        window.app.showToast('Password berhasil diganti');
+      }
+    } catch (error) {
+      showError(error && error.message ? error.message : 'Gagal mengganti password.');
+    }
   }
 
   function start() {

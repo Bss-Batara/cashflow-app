@@ -414,3 +414,41 @@ function revokeCashflowAccount(username) {
 
   return { username: key, userRemoved: existed, tokensRemoved: removed };
 }
+/**
+ * Mengganti password akun yang sedang login. Token lain milik akun yang sama
+ * dicabut agar sesi lama tidak tetap aktif.
+ */
+function changeCashflowPassword(token, currentPassword, newPassword) {
+  var session = currentUser(token);
+  var users = readCashflowUsers_();
+  var key = cashflowNormalizeUsername_(session.username);
+  var user = users[key];
+
+  if (!user) throw new Error('Akun tidak ditemukan.');
+  if (user.hash !== cashflowHashPassword_(String(currentPassword || ''), user.salt)) {
+    throw new Error('Password saat ini salah.');
+  }
+
+  var next = String(newPassword || '');
+  if (next.length < 8) throw new Error('Password baru minimal 8 karakter.');
+  if (next === String(currentPassword || '')) throw new Error('Password baru harus berbeda dari yang lama.');
+
+  var salt = Utilities.getUuid().replace(/-/g, '');
+  user.salt = salt;
+  user.hash = cashflowHashPassword_(next, salt);
+  user.updatedAt = new Date().toISOString();
+  users[key] = user;
+  writeCashflowUsers_(users);
+
+  var tokens = readCashflowTokens_();
+  var revoked = 0;
+  Object.keys(tokens).forEach(function (item) {
+    if (cashflowNormalizeUsername_(tokens[item].username) === key && item !== token) {
+      delete tokens[item];
+      revoked += 1;
+    }
+  });
+  writeCashflowTokens_(tokens);
+
+  return { changed: true, otherSessionsRevoked: revoked };
+}
