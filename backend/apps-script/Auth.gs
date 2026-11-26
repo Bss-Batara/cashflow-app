@@ -189,6 +189,8 @@ var CASHFLOW_TOKENS_PROPERTY = 'CASHFLOW_TOKENS_V1';
 var CASHFLOW_TOKEN_TTL_MS = 8 * 60 * 60 * 1000;
 var CASHFLOW_MAX_LOGIN_FAILS = 5;
 var CASHFLOW_MAX_ACCOUNTS = 100;
+var CASHFLOW_USER_PREFIX = 'CASHFLOW_USER_V1_';
+var CASHFLOW_USER_INDEX_PROPERTY = 'CASHFLOW_USER_INDEX_V1';
 var CASHFLOW_LOGIN_LOCK_SECONDS = 600;
 
 function cashflowHex_(bytes) {
@@ -206,20 +208,86 @@ function cashflowHashPassword_(password, salt) {
   ));
 }
 
-function readCashflowUsers_() {
-  var raw = PropertiesService.getScriptProperties().getProperty(CASHFLOW_USERS_PROPERTY);
-  if (!raw) return {};
+function readCashflowUserIndex_() {
+  var raw = PropertiesService.getScriptProperties().getProperty(CASHFLOW_USER_INDEX_PROPERTY);
+  if (!raw) return [];
   try {
     var parsed = JSON.parse(raw);
-    return parsed && typeof parsed === 'object' ? parsed : {};
+    return Array.isArray(parsed) ? parsed : [];
   } catch (error) {
-    return {};
+    return [];
   }
 }
 
-function writeCashflowUsers_(users) {
+function writeCashflowUserIndex_(list) {
   PropertiesService.getScriptProperties()
-    .setProperty(CASHFLOW_USERS_PROPERTY, JSON.stringify(users));
+    .setProperty(CASHFLOW_USER_INDEX_PROPERTY, JSON.stringify(list));
+}
+
+/** Satu akun = satu Script Property, jadi batas 9 KB per nilai tidak terlampaui. */
+function readCashflowUser_(username) {
+  var raw = PropertiesService.getScriptProperties()
+    .getProperty(CASHFLOW_USER_PREFIX + username);
+  if (!raw) return null;
+  try {
+    var parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : null;
+  } catch (error) {
+    return null;
+  }
+}
+
+function writeCashflowUser_(user) {
+  PropertiesService.getScriptProperties()
+    .setProperty(CASHFLOW_USER_PREFIX + user.username, JSON.stringify(user));
+  var index = readCashflowUserIndex_();
+  if (index.indexOf(user.username) === -1) {
+    index.push(user.username);
+    writeCashflowUserIndex_(index);
+  }
+}
+
+function deleteCashflowUser_(username) {
+  var props = PropertiesService.getScriptProperties();
+  props.deleteProperty(CASHFLOW_USER_PREFIX + username);
+  writeCashflowUserIndex_(readCashflowUserIndex_().filter(function (name) {
+    return name !== username;
+  }));
+}
+
+/** Peta seluruh akun; hanya dipakai untuk cek email unik saat pendaftaran. */
+function readCashflowUsers_() {
+  var users = {};
+  readCashflowUserIndex_().forEach(function (username) {
+    var user = readCashflowUser_(username);
+    if (user) users[username] = user;
+  });
+  return users;
+}
+
+/** Pindahkan akun dari format lama (satu JSON besar) ke properti per akun. */
+function migrateLegacyCashflowUsers_() {
+  var props = PropertiesService.getScriptProperties();
+  var raw = props.getProperty(CASHFLOW_USERS_PROPERTY);
+  if (!raw) return;
+
+  var parsed = null;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (error) {
+    return;
+  }
+  if (!parsed || typeof parsed !== 'object') return;
+
+  var index = readCashflowUserIndex_();
+  Object.keys(parsed).forEach(function (username) {
+    var user = parsed[username];
+    if (!user || !user.username) return;
+    props.setProperty(CASHFLOW_USER_PREFIX + user.username, JSON.stringify(user));
+    if (index.indexOf(user.username) === -1) index.push(user.username);
+  });
+  writeCashflowUserIndex_(index);
+  props.deleteProperty(CASHFLOW_USERS_PROPERTY);
 }
 
 function readCashflowTokens_() {
@@ -270,9 +338,10 @@ function cashflowValidateCredentials_(input) {
  */
 function registerUser(input) {
   var credentials = cashflowValidateCredentials_(input);
+  migrateLegacyCashflowUsers_();
   var users = readCashflowUsers_();
 
-  if (users[credentials.username]) {
+  if (readCashflowUser_(credentials.username)) {
     throw new Error('Username sudah terdaftar.');
   }
 
@@ -297,17 +366,17 @@ function registerUser(input) {
   }
 
   var salt = Utilities.getUuid().replace(/-/g, '');
-  users[credentials.username] = {
+  var account = {
     username: credentials.username,
-    ownerId: email || credentials.username,
+    ownerId: email,
     email: email,
     salt: salt,
     hash: cashflowHashPassword_(credentials.password, salt),
     createdAt: new Date().toISOString()
   };
-  writeCashflowUsers_(users);
+  writeCashflowUser_(account);
 
-  return cashflowIssueToken_(users[credentials.username]);
+  return cashflowIssueToken_(account);
 }
 
 function loginUser(input) {
@@ -320,8 +389,8 @@ function loginUser(input) {
     throw new Error('Terlalu banyak percobaan gagal. Coba lagi dalam 10 menit.');
   }
 
-  var users = readCashflowUsers_();
-  var user = users[credentials.username];
+  migrateLegacyCashflowUsers_();
+  var user = readCashflowUser_(credentials.username);
 
   if (!user || user.hash !== cashflowHashPassword_(credentials.password, user.salt)) {
     cache.put(cacheKey, String(fails + 1), CASHFLOW_LOGIN_LOCK_SECONDS);
@@ -411,11 +480,10 @@ function revokeCashflowAccount(username) {
   var key = cashflowNormalizeUsername_(username);
   if (!key) throw new Error('username is required.');
 
-  var users = readCashflowUsers_();
-  var existed = Object.prototype.hasOwnProperty.call(users, key);
+  migrateLegacyCashflowUsers_();
+  var existed = Boolean(readCashflowUser_(key));
   if (existed) {
-    delete users[key];
-    writeCashflowUsers_(users);
+    deleteCashflowUser_(key);
   }
 
   var tokens = readCashflowTokens_();
@@ -436,9 +504,9 @@ function revokeCashflowAccount(username) {
  */
 function changeCashflowPassword(token, currentPassword, newPassword) {
   var session = currentUser(token);
-  var users = readCashflowUsers_();
+  migrateLegacyCashflowUsers_();
   var key = cashflowNormalizeUsername_(session.username);
-  var user = users[key];
+  var user = readCashflowUser_(key);
 
   if (!user) throw new Error('Akun tidak ditemukan.');
   if (user.hash !== cashflowHashPassword_(String(currentPassword || ''), user.salt)) {
@@ -453,8 +521,7 @@ function changeCashflowPassword(token, currentPassword, newPassword) {
   user.salt = salt;
   user.hash = cashflowHashPassword_(next, salt);
   user.updatedAt = new Date().toISOString();
-  users[key] = user;
-  writeCashflowUsers_(users);
+  writeCashflowUser_(user);
 
   var tokens = readCashflowTokens_();
   var revoked = 0;
