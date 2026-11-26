@@ -102,6 +102,7 @@
     if (el.confirmField) el.confirmField.hidden = state.mode !== 'register';
     if (el.emailField) el.emailField.hidden = state.mode !== 'register';
     if (el.confirm) el.confirm.required = state.mode === 'register';
+    if (el.email) el.email.required = state.mode === 'register';
     if (el.switchWrap) el.switchWrap.hidden = !REGISTRATION_OPEN;
     if (el.switchBtn) {
       el.switchBtn.textContent = state.mode === 'register'
@@ -175,15 +176,17 @@
       return setError('Konfirmasi password tidak sama.');
     }
 
+    const email = String((el.email && el.email.value) || '').trim();
+    if (isRegister && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+      return setError('Email Google wajib diisi dengan benar.');
+    }
+
     setBusy(true);
     setError('');
 
     try {
       const params = { username: username, password: password };
-      if (isRegister) {
-        const email = String((el.email && el.email.value) || '').trim();
-        if (email) params.email = email;
-      }
+      if (isRegister) params.email = email;
       const data = await window.CashflowApi.get(isRegister ? 'register' : 'login', params);
       finishLogin(data);
     } catch (error) {

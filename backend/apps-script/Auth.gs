@@ -188,6 +188,7 @@ var CASHFLOW_USERS_PROPERTY = 'CASHFLOW_USERS_V1';
 var CASHFLOW_TOKENS_PROPERTY = 'CASHFLOW_TOKENS_V1';
 var CASHFLOW_TOKEN_TTL_MS = 8 * 60 * 60 * 1000;
 var CASHFLOW_MAX_LOGIN_FAILS = 5;
+var CASHFLOW_MAX_ACCOUNTS = 100;
 var CASHFLOW_LOGIN_LOCK_SECONDS = 600;
 
 function cashflowHex_(bytes) {
@@ -275,9 +276,24 @@ function registerUser(input) {
     throw new Error('Username sudah terdaftar.');
   }
 
+  if (Object.keys(users).length >= CASHFLOW_MAX_ACCOUNTS) {
+    throw new Error('Batas maksimal 100 akun telah tercapai.');
+  }
+
+  // Email wajib: dipakai sebagai ownerId untuk memisahkan data antar anggota.
   var email = String((input && input.email) || '').trim().toLowerCase();
-  if (email && !isEmail_(email)) {
+  if (!email) {
+    throw new Error('Email Google wajib diisi.');
+  }
+  if (!isEmail_(email)) {
     throw new Error('Email tidak valid.');
+  }
+
+  var emailTaken = Object.keys(users).some(function (key) {
+    return String(users[key].email || '').toLowerCase() === email;
+  });
+  if (emailTaken) {
+    throw new Error('Email ini sudah dipakai akun lain.');
   }
 
   var salt = Utilities.getUuid().replace(/-/g, '');
