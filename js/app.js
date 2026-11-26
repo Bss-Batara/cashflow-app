@@ -172,20 +172,10 @@ class FinApp {
   }
 
   updateInvestPreview() {
-    const cat = document.getElementById('invest-input-category')?.value;
-    const units = cat === 'Dana Darurat' ? 1 : (parseFloat(document.getElementById('invest-input-units')?.value) || 1);
-    const buyPrice = parseFloat(document.getElementById('invest-input-buyprice')?.value) || 0;
-    const mult = cat === 'Saham' ? 100 : 1;
-    const total = units * mult * buyPrice;
+    // Satu input Rp Nabung = satu nilai aset, jadi tidak ada lagi
+    // perhitungan unit/lot/gram.
     const preview = document.getElementById('invest-capital-preview');
-    if (preview) {
-      if (total > 0 && cat !== 'Dana Darurat' && (units > 1 || mult > 1)) {
-        preview.style.display = 'block';
-        preview.textContent = `Estimasi Total Modal: ${window.formatIDR(total)}`;
-      } else {
-        preview.style.display = 'none';
-      }
-    }
+    if (preview) preview.style.display = 'none';
   }
 
   setupEventListeners() {
@@ -548,9 +538,13 @@ class FinApp {
     }
   }
 
-  deleteInvestment(id) {
-    if (confirm('Yakin ingin menghapus aset investasi ini dari portofolio?')) {
-      window.financeStore.deleteInvestment(id);
+  async deleteInvestment(id) {
+    if (!confirm('Yakin ingin menghapus aset investasi ini dari portofolio?')) return;
+
+    const result = await window.financeStore.deleteInvestment(id);
+    if (result && result.synced === false) {
+      this.showToast('Aset dihapus lokal, gagal sinkron ke Spreadsheet');
+    } else {
       this.showToast('Aset berhasil dihapus');
     }
   }
@@ -985,9 +979,6 @@ class FinApp {
     const buyPriceInput = document.getElementById('invest-input-buyprice');
     if (buyPriceInput) buyPriceInput.value = '';
     
-    const unitsInput = document.getElementById('invest-input-units');
-    if (unitsInput) unitsInput.value = '1';
-
     const preview = document.getElementById('invest-buyprice-preview');
     if (preview) preview.style.display = 'none';
 
@@ -1014,39 +1005,18 @@ class FinApp {
   }
 
   handleInvestCategoryChange(cat) {
-    const unitsGroup = document.getElementById('invest-units-group');
-    const unitNameInput = document.getElementById('invest-input-unitname');
-    const unitsLabel = document.getElementById('invest-label-units');
-    const unitsInput = document.getElementById('invest-input-units');
     const buyPriceLabel = document.getElementById('invest-label-buyprice');
+    if (!buyPriceLabel) return;
 
-    if (cat === 'Dana Darurat') {
-      if (unitsGroup) unitsGroup.style.display = 'none';
-      if (unitsInput) unitsInput.value = '1';
-      if (unitNameInput) unitNameInput.value = 'rupiah';
-      if (buyPriceLabel) buyPriceLabel.textContent = 'Nominal Dana Darurat (Rp) *';
-    } else {
-      if (unitsGroup) unitsGroup.style.display = 'grid';
-      if (buyPriceLabel) buyPriceLabel.textContent = 'Harga Beli (per unit/lot/gram) *';
-
-      if (cat === 'Saham') {
-        if (unitNameInput) unitNameInput.value = 'lot';
-        if (unitsLabel) unitsLabel.textContent = 'Jumlah Lot (1 lot = 100 lembar) *';
-        if (unitsInput && !unitsInput.value) unitsInput.value = '1';
-      } else if (cat === 'Emas') {
-        if (unitNameInput) unitNameInput.value = 'gram';
-        if (unitsLabel) unitsLabel.textContent = 'Jumlah Gram *';
-        if (unitsInput && !unitsInput.value) unitsInput.value = '1';
-      } else if (cat === 'Kripto') {
-        if (unitNameInput) unitNameInput.value = 'koin/token';
-        if (unitsLabel) unitsLabel.textContent = 'Jumlah Koin (BTC/ETH) *';
-        if (unitsInput && !unitsInput.value) unitsInput.value = '1';
-      } else {
-        if (unitNameInput) unitNameInput.value = 'unit';
-        if (unitsLabel) unitsLabel.textContent = 'Jumlah Unit *';
-        if (unitsInput && !unitsInput.value) unitsInput.value = '1';
-      }
-    }
+    const labels = {
+      'Dana Darurat': 'Nominal Dana Darurat (Rp) *',
+      'Saham': 'Nilai Investasi Saham (Rp) *',
+      'Reksadana': 'Nilai Reksa Dana (Rp) *',
+      'Emas': 'Nilai Emas (Rp) *',
+      'Kripto': 'Nilai Aset Kripto (Rp) *',
+      'Obligasi': 'Nilai Obligasi / SBN (Rp) *'
+    };
+    buyPriceLabel.textContent = labels[cat] || 'Nominal Aset (Rp) *';
     this.updateInvestPreview();
   }
 
@@ -1099,8 +1069,9 @@ class FinApp {
   handleSaveInvestment(e) {
     e.preventDefault();
     const category = document.getElementById('invest-input-category')?.value || 'Dana Darurat';
-    const units = category === 'Dana Darurat' ? 1 : (parseFloat(document.getElementById('invest-input-units')?.value) || 1);
-    const unitName = category === 'Dana Darurat' ? 'rupiah' : (document.getElementById('invest-input-unitname')?.value || 'unit');
+    // Satu input = satu nilai aset (tanpa lot/unit/gram).
+    const units = 1;
+    const unitName = 'rupiah';
     const buyPrice = parseFloat(document.getElementById('invest-input-buyprice')?.value);
     const dateBought = document.getElementById('invest-input-date')?.value || new Date().toISOString().split('T')[0];
     const notes = document.getElementById('invest-input-notes')?.value.trim() || '';

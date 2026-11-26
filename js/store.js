@@ -6,7 +6,8 @@
 const STORAGE_KEYS = {
   TRANSACTIONS: 'finflow_transactions_v1',
   INVESTMENTS: 'finflow_investments_v1',
-  SETTINGS: 'finflow_settings_v1'
+  SETTINGS: 'finflow_settings_v1',
+  INVESTMENT_DELETED: 'finflow_investment_deleted_v1'
 };
 
 // Initial Mock Data
@@ -200,10 +201,58 @@ class FinanceStore {
     return null;
   }
 
-  deleteInvestment(id) {
-    let investments = this.getInvestments();
-    investments = investments.filter(item => item.id !== id);
-    this.saveInvestments(investments);
+  getDeletedInvestmentIds() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(STORAGE_KEYS.INVESTMENT_DELETED) || '[]');
+      return Array.isArray(raw) ? raw : [];
+    } catch (error) {
+      return [];
+    }
+  }
+
+  markInvestmentDeleted(id) {
+    const ids = this.getDeletedInvestmentIds();
+    if (!ids.includes(id)) {
+      ids.push(id);
+      localStorage.setItem(STORAGE_KEYS.INVESTMENT_DELETED, JSON.stringify(ids));
+    }
+  }
+
+  unmarkInvestmentDeleted(id) {
+    const ids = this.getDeletedInvestmentIds().filter(item => item !== id);
+    localStorage.setItem(STORAGE_KEYS.INVESTMENT_DELETED, JSON.stringify(ids));
+  }
+
+  /**
+   * Hapus aset: lokal dulu, lalu void ke Spreadsheet. Selama penghapusan
+   * belum terkonfirmasi, id dicatat sebagai tombstone agar sinkronisasi
+   * berikutnya tidak memunculkan aset itu lagi.
+   */
+  async deleteInvestment(id) {
+    const investments = this.getInvestments();
+    const target = investments.find(item => item.id === id);
+    this.saveInvestments(investments.filter(item => item.id !== id));
+
+    if (!target) return { deleted: true, synced: true };
+
+    const hasToken = window.CashflowApi && window.CashflowApi.getToken && window.CashflowApi.getToken();
+    const isRemote = hasToken && !String(id).startsWith('inv-');
+    if (!isRemote) return { deleted: true, synced: true };
+
+    this.markInvestmentDeleted(id);
+
+    try {
+      await window.CashflowApi.post('voidInvestment', {
+        investmentId: id,
+        expectedVersion: target.version
+      });
+      this.unmarkInvestmentDeleted(id);
+      await this.syncInvestmentsFromApi_();
+      return { deleted: true, synced: true };
+    } catch (error) {
+      console.warn('[CashFlow] Aset dihapus lokal, gagal sinkron:', error.message);
+      return { deleted: true, synced: false, error };
+    }
   }
 
   // --- Settings ---
@@ -424,7 +473,10 @@ window.financeStore = new FinanceStore();
 
   FinanceStore.prototype.syncInvestmentsFromApi_ = async function () {
     const response = await window.CashflowApi.get('listInvestments');
-    const investments = response.items.map(item => {
+    const deletedIds = new Set(this.getDeletedInvestmentIds ? this.getDeletedInvestmentIds() : []);
+    const investments = response.items
+      .filter(item => !deletedIds.has(item.investmentId))
+      .map(item => {
       const name = String(item.name || '');
       const category = name.startsWith('Tabungan ') ? name.substring(9) : (item.categoryId || 'Lainnya');
       return {
@@ -434,7 +486,7 @@ window.financeStore = new FinanceStore();
         category: category,
         buyPrice: Number(item.buyPriceMinor) || 0,
         currentPrice: Number(item.currentPriceMinor) || 0,
-        units: Number(item.units) || 0,
+        units: Number(item.units) || 1,
         unitName: item.unitName || 'unit',
         unitMultiplier: Number(item.unitMultiplier) || 1,
         dateBought: item.dateBought,
@@ -457,9 +509,9 @@ window.financeStore = new FinanceStore();
           categoryId: 'investment-general',
           buyPriceMinor: Math.round(Number(inv.buyPrice) || 0),
           currentPriceMinor: Math.round(Number(inv.currentPrice ?? inv.buyPrice) || 0),
-          units: Number(inv.units) || 0,
-          unitName: inv.unitName || 'unit',
-          unitMultiplier: category === 'Saham' ? 100 : 1,
+          units: 1,
+          unitName: 'rupiah',
+          unitMultiplier: 1,
           dateBought: inv.dateBought || new Date().toISOString().split('T')[0],
           notes: inv.notes || ''
         });

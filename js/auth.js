@@ -20,14 +20,37 @@
   const listeners = new Set();
   const el = {};
 
+  function sessionStore() {
+    // localStorage agar sesi bertahan setelah refresh / aplikasi ditutup.
+    try {
+      window.localStorage.setItem('__cf_probe', '1');
+      window.localStorage.removeItem('__cf_probe');
+      return window.localStorage;
+    } catch (error) {
+      return window.sessionStorage;
+    }
+  }
+
   function readSession() {
     try {
-      const raw = window.sessionStorage.getItem(SESSION_KEY);
+      const store = sessionStore();
+      let raw = store.getItem(SESSION_KEY);
+
+      // Migrasi dari versi lama yang menyimpan sesi di sessionStorage.
+      if (!raw) {
+        const legacy = window.sessionStorage.getItem(SESSION_KEY);
+        if (legacy) {
+          store.setItem(SESSION_KEY, legacy);
+          window.sessionStorage.removeItem(SESSION_KEY);
+          raw = legacy;
+        }
+      }
+
       if (!raw) return null;
       const session = JSON.parse(raw);
       if (!session || !session.token) return null;
       if (Number(session.expiresAt) <= Date.now()) {
-        window.sessionStorage.removeItem(SESSION_KEY);
+        store.removeItem(SESSION_KEY);
         return null;
       }
       return session;
@@ -43,7 +66,8 @@
       expiresAt: data.expiresAt ? Date.parse(data.expiresAt) : Date.now() + 8 * 60 * 60 * 1000
     };
     try {
-      window.sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+      sessionStore().setItem(SESSION_KEY, JSON.stringify(session));
+      window.sessionStorage.removeItem(SESSION_KEY);
     } catch (error) {
       /* storage bisa diblokir */
     }
@@ -52,6 +76,7 @@
 
   function clearSession() {
     try {
+      sessionStore().removeItem(SESSION_KEY);
       window.sessionStorage.removeItem(SESSION_KEY);
     } catch (error) {
       /* noop */
@@ -273,7 +298,7 @@
     const testButton = document.getElementById('cf-test-conn');
     if (testButton) {
       testButton.addEventListener('click', async function () {
-        setError('Menghubungi server…');
+        setError('Menghubungi serverï¿½');
         try {
           const info = await window.CashflowApi.get('health');
           setError('');
@@ -352,12 +377,13 @@
       return;
     }
 
-    // Token dari sessionStorage TIDAK dipercaya begitu saja: verifikasi ke
-    // server agar sesi lama/basi tidak membuka aplikasi dengan data lokal.
-    lockApp();
-    applyMode('login');
-    showOverlay();
+    // Sesi tersimpan: buka aplikasi langsung supaya refresh tidak melempar
+    // pengguna ke halaman login. Validasi token tetap berjalan di latar.
     window.CashflowApi.setToken(session.token);
+    setSessionLabel(session.username || '');
+    unlockApp();
+    hideOverlay();
+    notify('login');
 
     window.CashflowApi.get('me')
       .then(function (user) {
@@ -365,25 +391,18 @@
           writeSession({ token: session.token, username: user.username, expiresAt: user.expiresAt });
           setSessionLabel(user.username);
         }
-        unlockApp();
-        hideOverlay();
-        notify('login');
       })
       .catch(function (error) {
         const message = String((error && error.message) || '');
-        const offline = /timed out|could not be reached|Failed to fetch|NetworkError/i.test(message);
-
-        if (offline) {
-          // Backend tidak terjangkau: data lokal tetap boleh dibuka.
-          unlockApp();
-          hideOverlay();
-          notify('login');
-          return;
-        }
+        const offline = /timed out|could not be reached|Failed to fetch|NetworkError|Tidak dapat menghubungi/i.test(message);
+        if (offline) return;
 
         clearSession();
         window.CashflowApi.setToken('');
+        lockApp();
+        applyMode('login');
         setError('Sesi tidak valid atau sudah berakhir. Silakan masuk lagi.');
+        showOverlay();
       });
 
     startWatch();
