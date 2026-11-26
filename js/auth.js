@@ -78,6 +78,14 @@
     el.app = document.querySelector('.app-container');
   }
 
+  function passwordProblem(value) {
+    const pw = String(value || '');
+    if (pw.length < MIN_PASSWORD) return 'Password minimal 8 karakter.';
+    if (!/[A-Za-z]/.test(pw)) return 'Password harus mengandung huruf.';
+    if (!/[0-9]/.test(pw)) return 'Password harus mengandung angka.';
+    if (!/[^A-Za-z0-9]/.test(pw)) return 'Password harus mengandung simbol, misalnya ! @ # \$ %.';
+    return '';
+  }
   function setError(message) {
     if (!el.error) return;
     el.error.textContent = message || '';
@@ -103,6 +111,11 @@
     if (el.emailField) el.emailField.hidden = state.mode !== 'register';
     if (el.confirm) el.confirm.required = state.mode === 'register';
     if (el.email) el.email.required = state.mode === 'register';
+    if (el.password) {
+      el.password.placeholder = state.mode === 'register'
+        ? 'Min. 8 karakter: huruf, angka, simbol'
+        : 'Password';
+    }
     if (el.switchWrap) el.switchWrap.hidden = !REGISTRATION_OPEN;
     if (el.switchBtn) {
       el.switchBtn.textContent = state.mode === 'register'
@@ -171,6 +184,10 @@
     }
     if (password.length < MIN_PASSWORD) {
       return setError('Password minimal ' + MIN_PASSWORD + ' karakter.');
+    }
+    if (isRegister) {
+      const problem = passwordProblem(password);
+      if (problem) return setError(problem);
     }
     if (isRegister && el.confirm && el.confirm.value !== password) {
       return setError('Konfirmasi password tidak sama.');
@@ -277,7 +294,8 @@
 
     if (!session || !session.token) return showError('Sesi tidak ditemukan. Silakan masuk lagi.');
     if (!current.value) return showError('Isi password saat ini.');
-    if (next.value.length < 8) return showError('Password baru minimal 8 karakter.');
+    const problem = passwordProblem(next.value);
+    if (problem) return showError(problem);
     if (next.value !== confirm.value) return showError('Konfirmasi password baru tidak sama.');
 
     try {

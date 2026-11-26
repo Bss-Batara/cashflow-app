@@ -2,6 +2,12 @@
  * FinFlow API client for the Google Apps Script backend.
  * Backend mode aktif permanen: Spreadsheet menjadi sumber data utama,
  * localStorage dipakai sebagai salinan kerja/offline.
+ *
+ * Catatan CORS:
+ * - Endpoint /exec membalas `Access-Control-Allow-Origin: *`.
+ * - GET dipakai untuk aksi baca dan login/register.
+ * - POST memakai `Content-Type: text/plain` (simple request) supaya tidak
+ *   memicu preflight OPTIONS yang tidak didukung Apps Script.
  */
 const CASHFLOW_API_URL =
   'https://script.google.com/macros/s/AKfycbwNDh1yP1ErkKPjEkGcN28YO2AnUA8Mso_FyENR7MPEiHfxcY8fNydDe-fN8KA48w85/exec';
@@ -32,11 +38,10 @@ const CashflowApi = {
     if (this.token_ && !params.token) params.token = this.token_;
     const query = new URLSearchParams({ action: resolved, ...params }).toString();
 
-    // Gabungkan permintaan identik yang berjalan bersamaan (mis. sync dari
-    // store dan dari app saat halaman pertama dibuka).
+    // Gabungkan permintaan identik yang berjalan bersamaan.
     if (!this.inflight_) this.inflight_ = new Map();
     if (!this.inflight_.has(query)) {
-      const request = this.getJsonp_(`${CASHFLOW_API_URL}?${query}`)
+      const request = this.fetchJson_(`${CASHFLOW_API_URL}?${query}`)
         .finally(() => this.inflight_.delete(query));
       this.inflight_.set(query, request);
     }
@@ -46,7 +51,11 @@ const CashflowApi = {
   async post(action, payload = {}) {
     const body = { ...payload };
     if (this.token_ && !body.token) body.token = this.token_;
-    return this.postForm_(action, body);
+    return this.fetchJson_(CASHFLOW_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action, ...body })
+    });
   },
 
   async resolveCategoryId(category, type) {
@@ -81,39 +90,92 @@ const CashflowApi = {
     return match.categoryId;
   },
 
+  async fetchJson_(url, options = {}) {
+    if (typeof fetch !== 'function') {
+      return options.method === 'POST' ? this.postForm_(url, options) : this.getJsonp_(url);
+    }
+
+    const controller = typeof AbortController === 'function' ? new AbortController() : null;
+    const timer = controller
+      ? setTimeout(() => controller.abort(), CASHFLOW_API_TIMEOUT_MS)
+      : null;
+
+    try {
+      const response = await fetch(url, {
+        mode: 'cors',
+        redirect: 'follow',
+        cache: 'no-store',
+        credentials: 'omit',
+        signal: controller ? controller.signal : undefined,
+        ...options
+      });
+      return await this.parseResponse_(response);
+    } catch (error) {
+      const name = error && error.name;
+      const message = String((error && error.message) || '');
+
+      if (name === 'AbortError') {
+        throw new Error('Server tidak merespons (timeout). Coba lagi.');
+      }
+      if (/Failed to fetch|NetworkError|Load failed/i.test(message)) {
+        throw new Error('Tidak dapat menghubungi server. Periksa koneksi internet Anda.');
+      }
+      throw error;
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+  },
+
   async parseResponse_(response) {
-    const data = await response.json();
+    const type = (response.headers && response.headers.get('content-type')) || '';
+    if (type && !/json/i.test(type)) {
+      throw new Error(
+        'Server tidak mengembalikan JSON. Pastikan URL berakhiran /exec dan akses web app = Anyone.'
+      );
+    }
+
+    let data;
+    try {
+      data = await response.json();
+    } catch (error) {
+      throw new Error('Respons server tidak dapat dibaca. Coba muat ulang halaman.');
+    }
+
     if (!response.ok || !data.ok) {
-      const message = data?.error?.message || `API request failed (${response.status}).`;
+      const message = data && data.error && data.error.message
+        ? data.error.message
+        : 'Permintaan ke server gagal.';
       throw new Error(message);
     }
     return data.data;
   },
 
+  // --- Cadangan untuk browser lama tanpa fetch (JSONP / form POST) ---
   getJsonp_(url) {
     return new Promise((resolve, reject) => {
       const callbackName = `cashflowJsonp_${Date.now()}_${Math.random().toString(36).slice(2)}`;
       const script = document.createElement('script');
-      const cleanup = () => {
-        delete window[callbackName];
-        script.remove();
-      };
-      const timer = window.setTimeout(() => {
+      delete window[callbackName];
+      const timer = setTimeout(() => {
         cleanup();
         reject(new Error('Cashflow API request timed out.'));
       }, CASHFLOW_API_TIMEOUT_MS);
 
+      function cleanup() {
+        clearTimeout(timer);
+        delete window[callbackName];
+        script.remove();
+      }
+
       window[callbackName] = data => {
-        window.clearTimeout(timer);
         cleanup();
         if (!data || !data.ok) {
-          reject(new Error(data?.error?.message || 'API request failed.'));
+          reject(new Error((data && data.error && data.error.message) || 'API request failed.'));
           return;
         }
         resolve(data.data);
       };
       script.onerror = () => {
-        window.clearTimeout(timer);
         cleanup();
         reject(new Error('Cashflow API could not be reached.'));
       };
@@ -122,7 +184,7 @@ const CashflowApi = {
     });
   },
 
-  postForm_(action, payload) {
+  postForm_(url, options) {
     return new Promise((resolve, reject) => {
       const frameName = `cashflowPost_${Date.now()}_${Math.random().toString(36).slice(2)}`;
       const iframe = document.createElement('iframe');
@@ -131,26 +193,24 @@ const CashflowApi = {
       const form = document.createElement('form');
       form.method = 'POST';
       form.target = frameName;
-      form.action = CASHFLOW_API_URL;
+      form.action = url;
       form.hidden = true;
       const input = document.createElement('input');
       input.name = 'payload';
-      input.value = JSON.stringify({ action, payload });
+      input.value = (options && options.body) || '{}';
       form.appendChild(input);
       document.body.append(iframe, form);
-      const cleanup = () => {
-        window.clearTimeout(timer);
-        iframe.remove();
-        form.remove();
-      };
-      const timer = window.setTimeout(() => {
+      const timer = setTimeout(() => {
         cleanup();
         reject(new Error('Cashflow API request timed out.'));
       }, CASHFLOW_API_TIMEOUT_MS);
+      function cleanup() {
+        clearTimeout(timer);
+        iframe.remove();
+        form.remove();
+      }
       iframe.onload = () => {
-        // Apps Script may finish the HTTP response just before the sheet
-        // write becomes visible to the following JSONP read.
-        window.setTimeout(() => {
+        setTimeout(() => {
           cleanup();
           resolve({ accepted: true });
         }, 700);

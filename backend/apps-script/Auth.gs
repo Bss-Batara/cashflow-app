@@ -315,18 +315,39 @@ function cashflowNormalizeUsername_(value) {
   return String(value || '').trim().toLowerCase();
 }
 
+/**
+ * Aturan kekuatan password untuk pendaftaran dan penggantian password.
+ * Login tidak memakai aturan ini agar akun lama tetap bisa masuk.
+ */
+function cashflowCheckPasswordStrength_(password) {
+  var value = String(password || '');
+  if (value.length < 8) {
+    throw new Error('Password minimal 8 karakter.');
+  }
+  if (!/[A-Za-z]/.test(value)) {
+    throw new Error('Password harus mengandung huruf.');
+  }
+  if (!/[0-9]/.test(value)) {
+    throw new Error('Password harus mengandung angka.');
+  }
+  if (!/[^A-Za-z0-9]/.test(value)) {
+    throw new Error('Password harus mengandung simbol, misalnya ! @ # \$ %.');
+  }
+  return true;
+}
+
 function cashflowValidateCredentials_(input) {
   var username = cashflowNormalizeUsername_(input && input.username);
   var password = String((input && input.password) || '');
 
   if (!/^[a-z0-9._-]{3,32}$/.test(username)) {
-    throw new Error('Username must be 3-32 characters: a-z, 0-9, dot, underscore or dash.');
+    throw new Error('Username 3-32 karakter: huruf kecil, angka, titik, garis bawah, atau strip.');
   }
   if (password.length < 8) {
-    throw new Error('Password must be at least 8 characters.');
+    throw new Error('Password minimal 8 karakter.');
   }
   if (password.length > 200) {
-    throw new Error('Password is too long.');
+    throw new Error('Password terlalu panjang.');
   }
 
   return { username: username, password: password };
@@ -338,6 +359,7 @@ function cashflowValidateCredentials_(input) {
  */
 function registerUser(input) {
   var credentials = cashflowValidateCredentials_(input);
+  cashflowCheckPasswordStrength_(credentials.password);
   migrateLegacyCashflowUsers_();
   var users = readCashflowUsers_();
 
@@ -514,7 +536,7 @@ function changeCashflowPassword(token, currentPassword, newPassword) {
   }
 
   var next = String(newPassword || '');
-  if (next.length < 8) throw new Error('Password baru minimal 8 karakter.');
+  cashflowCheckPasswordStrength_(next);
   if (next === String(currentPassword || '')) throw new Error('Password baru harus berbeda dari yang lama.');
 
   var salt = Utilities.getUuid().replace(/-/g, '');
