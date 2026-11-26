@@ -13,9 +13,8 @@
   const SESSION_KEY = 'cashflow_session_v1';
   const MIN_USERNAME = 3;
   const MIN_PASSWORD = 8;
-  // Pendaftaran publik ditutup di backend (action register dihapus).
-  // Ubah ke true hanya jika endpoint register diaktifkan kembali.
-  const REGISTRATION_OPEN = false;
+  // Pendaftaran publik aktif kembali (action register tersedia di Api.gs).
+  const REGISTRATION_OPEN = true;
 
   const state = { mode: 'login', busy: false };
   const listeners = new Set();
@@ -189,10 +188,11 @@
       finishLogin(data);
     } catch (error) {
       const message = String((error && error.message) || '');
-      const notDeployed = /Unsupported action|not found|tidak dikenal/i.test(message);
-      setError(notDeployed
-        ? 'Backend GAS belum memuat login. Deploy ulang Apps Script (versi baru) lalu coba lagi.'
-        : (error && error.message ? error.message : 'Gagal menghubungi server.'));
+      if (/Unsupported action/i.test(message)) {
+        setError('Server menolak aksi ' + (isRegister ? 'register' : 'login') + ' (' + message + ').');
+      } else {
+        setError(message || 'Gagal menghubungi server.');
+      }
     } finally {
       setBusy(false);
     }
