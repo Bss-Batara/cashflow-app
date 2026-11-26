@@ -13,6 +13,9 @@
   const SESSION_KEY = 'cashflow_session_v1';
   const MIN_USERNAME = 3;
   const MIN_PASSWORD = 8;
+  // Pendaftaran publik ditutup di backend (action register dihapus).
+  // Ubah ke true hanya jika endpoint register diaktifkan kembali.
+  const REGISTRATION_OPEN = false;
 
   const state = { mode: 'login', busy: false };
   const listeners = new Set();
@@ -91,7 +94,7 @@
   }
 
   function applyMode(mode) {
-    state.mode = mode === 'register' ? 'register' : 'login';
+    state.mode = (mode === 'register' && REGISTRATION_OPEN) ? 'register' : 'login';
     if (el.subtitle) {
       el.subtitle.textContent = state.mode === 'register'
         ? 'Buat akun CashFlow untuk menyimpan data di Spreadsheet.'
@@ -100,6 +103,7 @@
     if (el.confirmField) el.confirmField.hidden = state.mode !== 'register';
     if (el.emailField) el.emailField.hidden = state.mode !== 'register';
     if (el.confirm) el.confirm.required = state.mode === 'register';
+    if (el.switchWrap) el.switchWrap.hidden = !REGISTRATION_OPEN;
     if (el.switchBtn) {
       el.switchBtn.textContent = state.mode === 'register'
         ? 'Sudah punya akun? Masuk'
@@ -230,7 +234,7 @@
 
     if (el.switchBtn) {
       el.switchBtn.addEventListener('click', function () {
-        if (state.busy) return;
+        if (state.busy || !REGISTRATION_OPEN) return;
         applyMode(state.mode === 'register' ? 'login' : 'register');
       });
     }
