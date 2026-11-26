@@ -118,9 +118,9 @@
     }
     if (el.switchWrap) el.switchWrap.hidden = !REGISTRATION_OPEN;
     if (el.switchBtn) {
-      el.switchBtn.textContent = state.mode === 'register'
-        ? 'Sudah punya akun? Masuk'
-        : 'Belum punya akun? Daftar sekarang';
+      el.switchBtn.innerHTML = state.mode === 'register'
+        ? 'Sudah punya akun?<br>Masuk di sini'
+        : 'Belum punya akun?<br>Daftar sekarang';
     }
     setError('');
     setBusy(false);
@@ -253,7 +253,8 @@
     }
 
     if (el.switchBtn) {
-      el.switchBtn.addEventListener('click', function () {
+      el.switchBtn.addEventListener('click', function (event) {
+        if (event) event.preventDefault();
         if (state.busy || !REGISTRATION_OPEN) return;
         applyMode(state.mode === 'register' ? 'login' : 'register');
       });
