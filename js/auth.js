@@ -269,6 +269,23 @@
       });
     }
 
+    const testButton = document.getElementById('cf-test-conn');
+    if (testButton) {
+      testButton.addEventListener('click', async function () {
+        setError('Menghubungi server…');
+        try {
+          const info = await window.CashflowApi.get('health');
+          setError('');
+          const scope = document.getElementById('cf-login-error');
+          if (scope) {
+            scope.style.color = '#059669';
+            scope.textContent = 'Server terhubung (schema ' + (info && info.schemaVersion ? info.schemaVersion : '?') + ').';
+          }
+        } catch (error) {
+          setError('Koneksi gagal: ' + (error && error.message ? error.message : 'tidak diketahui'));
+        }
+      });
+    }
     const passwordForm = document.getElementById('cf-change-password');
     if (passwordForm) {
       passwordForm.addEventListener('submit', function (event) {
