@@ -366,18 +366,25 @@ class FinanceStore {
   exportCSV() {
     const transactions = this.getTransactions();
     const headers = ['ID', 'Tipe', 'Judul', 'Nominal (Rp)', 'Kategori', 'Tanggal', 'Dompet/Akun', 'Catatan'];
+
+    // Excel dengan regional Indonesia memakai ";" sebagai pemisah daftar.
+    const escapeCell = (value) => {
+      const raw = value === null || value === undefined ? '' : String(value);
+      return /[";\r\n]/.test(raw) ? '"' + raw.replace(/"/g, '""') + '"' : raw;
+    };
+
     const rows = transactions.map(t => [
-      t.id,
+      escapeCell(t.id),
       t.type === 'income' ? 'Pemasukan' : 'Pengeluaran',
-      `"${(t.title || '').replace(/"/g, '""')}"`,
-      t.amount,
-      `"${t.category || ''}"`,
-      t.date,
-      `"${t.wallet || ''}"`,
-      `"${(t.note || '').replace(/"/g, '""')}"`
+      escapeCell(t.title),
+      Number(t.amount) || 0,
+      escapeCell(t.category),
+      escapeCell(t.date),
+      escapeCell(t.wallet),
+      escapeCell(t.note)
     ]);
 
-    return [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    return [headers.join(';'), ...rows.map(r => r.join(';'))].join('\r\n');
   }
 
   // Event dispatching for reactive UI updates

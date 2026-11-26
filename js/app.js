@@ -1175,12 +1175,31 @@ class FinApp {
 
   exportCSV() {
     const csv = window.financeStore.exportCSV();
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    // BOM agar Excel membaca UTF-8 dengan benar.
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
+
+    let username = 'Pengguna';
+    try {
+      const session = JSON.parse(sessionStorage.getItem('cashflow_session_v1') || 'null');
+      if (session && session.username) username = String(session.username);
+    } catch (error) {
+      /* biarkan nama default */
+    }
+
+    const safeName = username.replace(/[^\w.-]+/g, '') || 'Pengguna';
+    const now = new Date();
+    const stamp = [
+      now.getFullYear(),
+      String(now.getMonth() + 1).padStart(2, '0'),
+      String(now.getDate()).padStart(2, '0')
+    ].join('-');
+
     a.href = url;
-    a.download = `cashflow-transaksi-${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = 'Cashflow_' + safeName + '-Transaksi_' + stamp + '.csv';
     a.click();
+    URL.revokeObjectURL(url);
     this.showToast('File CSV berhasil diunduh');
   }
 

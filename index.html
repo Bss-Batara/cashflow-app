@@ -10,8 +10,8 @@
   <title>CashFlow - Catat Keuangan & Portofolio Investasi</title>
   
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="css/style.css?v=20261126i">
-  <link rel="stylesheet" href="css/login.css?v=20261126i">
+  <link rel="stylesheet" href="css/style.css?v=20261126j">
+  <link rel="stylesheet" href="css/login.css?v=20261126j">
 </head>
 <body>
 
@@ -575,7 +575,7 @@
             </div>
           </div>
           <p class="text-sm text-secondary" style="margin-bottom: 16px;">
-            Semua data disimpan secara aman di browser perangkat Anda (offline-first). Anda bisa mencadangkan data kapan saja.
+            Data Anda tersinkronisasi secara otomatis dengan Google Spreadsheet. Anda tetap bisa mengunduh cadangan (backup) JSON atau mengekspor ke CSV kapan saja.
           </p>
           <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px;">
             <button class="btn btn-secondary" onclick="app.exportCSV()">
@@ -592,13 +592,7 @@
               <input type="file" id="import-json-file" accept=".json" style="display: none;" onchange="app.importJSON(event)">
             </label>
           </div>
-          
-          <div style="border-top: 1px solid var(--border-color); padding-top: 16px; margin-bottom: 14px;">
-            <div class="text-xs text-muted" style="margin-bottom: 8px;">Mulai gunakan aplikasi untuk keuangan pribadi Anda:</div>
-            <button class="btn btn-primary btn-sm" onclick="app.clearRealData()">Mulai Data Kosong (Bersihkan Data Contoh)</button>
-          </div>
-
-          <div style="border-top: 1px solid var(--border-color); padding-top: 14px;">
+<div style="border-top: 1px solid var(--border-color); padding-top: 14px;">
             <div class="text-xs text-muted" style="margin-bottom: 8px;">Ambil ulang data terbaru dari Google Spreadsheet:</div>
             <button class="btn btn-secondary btn-sm" onclick="app.resetDemoData()">Muat Ulang dari Spreadsheet</button>
           </div>
@@ -798,10 +792,10 @@
   <div id="toast-container" class="toast-container"></div>
 
   <!-- SCRIPTS -->
-  <script src="js/api.js?v=20261126i"></script>
-  <script src="js/store.js?v=20261126i"></script>
-  <script src="js/charts.js?v=20261126i"></script>
-  <script src="js/auth.js?v=20261126i"></script>
-  <script src="js/app.js?v=20261126i"></script>
+  <script src="js/api.js?v=20261126j"></script>
+  <script src="js/store.js?v=20261126j"></script>
+  <script src="js/charts.js?v=20261126j"></script>
+  <script src="js/auth.js?v=20261126j"></script>
+  <script src="js/app.js?v=20261126j"></script>
 </body>
 </html>
