@@ -801,7 +801,7 @@ class FinApp {
           const duplicate = (existing.items || []).some(tx =>
             String(tx.title || '') === String(item.data.title || '') &&
             Number(tx.amountMinor) === Number(item.data.amount) &&
-            String(tx.transactionDate || '').slice(0, 10) === String(item.data.date || '').slice(0, 10)
+            this.toIsoDate_(tx.transactionDate) === String(item.data.date || '').slice(0, 10)
           );
           if (!duplicate) {
             const categoryId = await api.resolveCategoryId(item.data.category, item.data.type);
