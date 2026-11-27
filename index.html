@@ -10,8 +10,8 @@
   <title>CashFlow - Catat Keuangan & Portofolio Investasi</title>
   
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="css/style.css?v=20261126m">
-  <link rel="stylesheet" href="css/login.css?v=20261126m">
+  <link rel="stylesheet" href="css/style.css?v=20261126n">
+  <link rel="stylesheet" href="css/login.css?v=20261126n">
 </head>
 <body>
 
@@ -83,7 +83,7 @@
 
                <!-- Teks Daftar Sekarang (Diperkecil) -->
                 <p class="cf-login-switch" style="margin-top: 10px;">
-          <button type="button" id="cf-forgot-link">Lupa password?</button>
+          <button type="button" id="cf-forgot-link" onclick="window.cashflowShowForgot && window.cashflowShowForgot(event)">Lupa password?</button>
         </p>
 
 <div id="cf-login-switch" style="text-align: center; margin-bottom: 12px;">
@@ -823,17 +823,17 @@
   <div id="toast-container" class="toast-container"></div>
 
   <!-- SCRIPTS -->
-  <script src="js/api.js?v=20261126m"></script>
-  <script src="js/store.js?v=20261126m"></script>
-  <script src="js/charts.js?v=20261126m"></script>
-  <script src="js/auth.js?v=20261126m"></script>
-  <script src="js/app.js?v=20261126m"></script>
+  <script src="js/api.js?v=20261126n"></script>
+  <script src="js/store.js?v=20261126n"></script>
+  <script src="js/charts.js?v=20261126n"></script>
+  <script src="js/auth.js?v=20261126n"></script>
+  <script src="js/app.js?v=20261126n"></script>
 
   <!-- SERVICE WORKER (PWA installable) -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function () {
-        navigator.serviceWorker.register('sw.js').catch(function (error) {
+        navigator.serviceWorker.register('sw.js?v=2').catch(function (error) {
           console.warn('Service worker gagal didaftarkan:', error.message);
         });
       });

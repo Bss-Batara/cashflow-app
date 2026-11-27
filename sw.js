@@ -6,7 +6,7 @@
  * - Request lintas-origin (Google Apps Script): dilewati sama sekali,
  *   supaya data keuangan tidak pernah disajikan dari cache.
  */
-const CACHE_NAME = 'cashflow-static-v1';
+const CACHE_NAME = 'cashflow-static-v2';
 
 const SHELL = [
   './',

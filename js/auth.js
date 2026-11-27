@@ -579,6 +579,17 @@
     }, 30000);
   }
 
+  // Fallback: bisa dipanggil langsung dari atribut onclick bila listener utama gagal.
+  window.cashflowShowForgot = function (event) {
+    if (event) event.preventDefault();
+    applyMode('forgot');
+  };
+
+  window.cashflowShowLogin = function (event) {
+    if (event) event.preventDefault();
+    applyMode('login');
+  };
+
   window.cashflowAuth = {
     isAuthenticated: function () { return readSession() !== null; },
     session: function () { return readSession(); },
