@@ -342,7 +342,7 @@ class FinApp {
   getDashboardTransactions() {
     const key = this.dashboardPeriodKey();
     return window.financeStore.getTransactions()
-      .filter(tx => String(tx.date || '').slice(0, 7) === key);
+      .filter(tx => this.toIsoDate_(tx.date).slice(0, 7) === key);
   }
 
   computeDashboardMetrics() {
@@ -400,14 +400,12 @@ class FinApp {
 
     monthSelect.addEventListener('change', () => {
       this.dashMonth = Number(monthSelect.value);
-      this.renderDashboard();
-      this.renderCharts();
+      this.refreshDashboardData();
     });
 
     yearSelect.addEventListener('change', () => {
       this.dashYear = Number(yearSelect.value);
-      this.renderDashboard();
-      this.renderCharts();
+      this.refreshDashboardData();
     });
   }
 

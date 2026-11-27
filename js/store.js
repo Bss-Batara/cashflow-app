@@ -66,7 +66,7 @@ class FinanceStore {
       title: tx.title,
       amount: Number(tx.amountMinor) || 0,
       category: categoryNames.get(tx.categoryId) || tx.categoryId,
-      date: tx.transactionDate,
+      date: this.toIsoDate_(tx.transactionDate),
       wallet: tx.wallet,
       note: tx.note,
       status: tx.status,
@@ -116,6 +116,22 @@ class FinanceStore {
   }
 
   /** Gabungkan hasil server dengan antrean agar data lokal yang belum terkirim tidak hilang. */
+  /** Normalisasi tanggal server (ISO/UTC) menjadi YYYY-MM-DD WIB. */
+  toIsoDate_(value) {
+    if (!value) return '';
+    const text = String(value);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return text;
+    const parsed = new Date(text);
+    if (Number.isNaN(parsed.getTime())) return text.slice(0, 10);
+    try {
+      return new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit'
+      }).format(parsed);
+    } catch (error) {
+      return text.slice(0, 10);
+    }
+  }
+
   mergeTransactionsWithQueue_(serverTransactions) {
     const queue = this.getSyncQueue();
     const pendingVoid = new Set(
