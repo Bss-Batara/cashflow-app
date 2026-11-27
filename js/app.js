@@ -982,46 +982,39 @@ class FinApp {
       const pendingInv = queue.filter(item => item.kind === 'investment' && item.op === 'create');
 
       // Jumlah yang masih perlu dikirim = (jumlah di antrean) - (jumlah di server).
-      const txSend = new Map();
+      const serverTxRows = [];
       if (pendingTx.length) {
         const snapshot = await api.get('listTransactions');
-        const serverCounts = new Map();
-        (snapshot.items || []).forEach(row => {
-          const key = txSignature(row);
-          serverCounts.set(key, (serverCounts.get(key) || 0) + 1);
-        });
-        pendingTx.forEach(item => {
-          const key = txSignature(item.data);
-          if (!txSend.has(key)) {
-            txSend.set(key, Math.max(0, pendingTx.filter(other => txSignature(other.data) === key).length - (serverCounts.get(key) || 0)));
-          }
-        });
+        serverTxRows.push(...(snapshot.items || []));
       }
 
-      const invSend = new Map();
+      const serverInvRows = [];
       if (pendingInv.length) {
         const snapshot = await api.get('listInvestments');
-        const serverCounts = new Map();
-        (snapshot.items || []).forEach(row => {
-          const key = invSignature(row);
-          serverCounts.set(key, (serverCounts.get(key) || 0) + 1);
-        });
-        pendingInv.forEach(item => {
-          const key = invSignature(item.data);
-          if (!invSend.has(key)) {
-            invSend.set(key, Math.max(0, pendingInv.filter(other => invSignature(other.data) === key).length - (serverCounts.get(key) || 0)));
-          }
-        });
+        serverInvRows.push(...(snapshot.items || []));
       }
+
+      const sameTx = (row, data) =>
+        (row.clientRef && (row.clientRef === data.clientRef || row.clientRef === data.queueRef)) ||
+        (String(row.title || '').trim().toLowerCase() === String(data.title || '').trim().toLowerCase() &&
+          Math.round(Number(row.amountMinor ?? row.amount) || 0) === Math.round(Number(data.amount) || 0) &&
+          this.toIsoDate_(row.transactionDate ?? row.date) === String(data.date || '').slice(0, 10));
+
+      const sameInv = (row, data) =>
+        (row.clientRef && (row.clientRef === data.clientRef || row.clientRef === data.queueRef)) ||
+        (String(row.name || '').trim().toLowerCase() === String(data.name || '').trim().toLowerCase() &&
+          Math.round(Number(row.buyPriceMinor ?? row.buyPrice) || 0) === Math.round(Number(data.buyPrice) || 0) &&
+          String(row.dateBought || '').slice(0, 10) === String(data.dateBought || '').slice(0, 10));
 
       for (const item of queue) {
         try {
           if (item.kind === 'transaction' && item.op === 'create') {
-            const key = txSignature(item.data);
-            const left = txSend.get(key) || 0;
-            if (left > 0) {
+            const alreadyOnServer = Number(item.attempts || 0) > 0 && serverTxRows.some(row => sameTx(row, item.data));
+            if (!alreadyOnServer) {
               const categoryId = await api.resolveCategoryId(item.data.category, item.data.type);
+              window.financeStore.markSyncAttempt(item.id);
               await api.post('createTransaction', {
+                clientRef: item.clientRef || item.id,
                 type: item.data.type,
                 title: item.data.title,
                 amountMinor: Math.round(Number(item.data.amount) || 0),
@@ -1031,7 +1024,6 @@ class FinApp {
                 wallet: item.data.wallet || '',
                 note: item.data.note || ''
               });
-              txSend.set(key, left - 1);
             }
           } else if (item.kind === 'transaction' && item.op === 'update') {
           const current = await api.get('listTransactions', { includeVoided: 'true' });
@@ -1073,10 +1065,11 @@ class FinApp {
               });
             }
           } else if (item.kind === 'investment' && item.op === 'create') {
-            const key = invSignature(item.data);
-            const left = invSend.get(key) || 0;
-            if (left > 0) {
+            const alreadyOnServer = Number(item.attempts || 0) > 0 && serverInvRows.some(row => sameInv(row, item.data));
+            if (!alreadyOnServer) {
+              window.financeStore.markSyncAttempt(item.id);
               await api.post('createInvestment', {
+                clientRef: item.clientRef || item.id,
                 name: item.data.name,
                 code: item.data.code,
                 categoryId: 'investment-general',
@@ -1088,7 +1081,6 @@ class FinApp {
                 dateBought: item.data.dateBought,
                 notes: item.data.notes || ''
               });
-              invSend.set(key, left - 1);
             }
           } else if (item.kind === 'investment' && item.op === 'void') {
             const current = await api.get('listInvestments', { includeVoided: 'true' });

@@ -85,7 +85,7 @@ try {
       window.CashflowApi.setToken = () => {};
       window.CashflowApi.resolveCategoryId = async () => 'expense-food';
       window.CashflowApi.get = async (action) => {
-        if (action === 'listTransactions') return { items: window.__mock.rows };
+        if (action === 'list' || action === 'listTransactions') return { items: window.__mock.rows };
         if (action === 'listCategories') return { items: [{ categoryId: 'expense-food', displayName: 'Makanan & Minuman' }, { categoryId: 'income-salary', displayName: 'Gaji' }] };
         if (action === 'listInvestments') return { items: [] };
         return { items: [] };

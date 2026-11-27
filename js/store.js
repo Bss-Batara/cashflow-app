@@ -97,6 +97,8 @@ class FinanceStore {
     const queue = this.getSyncQueue();
     const item = {
       id: 'q-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7),
+      clientRef: 'cr-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10),
+      attempts: 0,
       kind: kind,
       op: op,
       data: data,
@@ -105,6 +107,15 @@ class FinanceStore {
     queue.push(item);
     this.saveSyncQueue(queue);
     return item;
+  }
+
+  /** Tandai percobaan kirim agar retry tidak menggandakan data. */
+  markSyncAttempt(id) {
+    const queue = this.getSyncQueue().map(item =>
+      item.id === id ? { ...item, attempts: Number(item.attempts || 0) + 1, lastAttemptAt: new Date().toISOString() } : item
+    );
+    this.saveSyncQueue(queue);
+    return queue.find(item => item.id === id) || null;
   }
 
   removeSyncItem(id) {

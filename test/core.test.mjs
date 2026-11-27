@@ -231,3 +231,15 @@ test('merge menerapkan edit yang masih menunggu sinkron', () => {
   assert.equal(merged[0].amount, 999);
   assert.equal(merged[0].type, 'expense');
 });
+
+test('clientRef stabil dan attempts bertambah saat retry', () => {
+  const { store } = createStore();
+  const item = store.enqueueSync('transaction', 'create', { id: 'tx-1', title: 'A', amount: 1, date: '2026-11-27' });
+  assert.ok(String(item.clientRef).startsWith('cr-'));
+  assert.equal(item.attempts, 0);
+  const first = store.getSyncQueue()[0].clientRef;
+  store.markSyncAttempt(item.id);
+  const after = store.getSyncQueue()[0];
+  assert.equal(after.clientRef, first);
+  assert.equal(after.attempts, 1);
+});
