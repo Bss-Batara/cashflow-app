@@ -1395,3 +1395,8 @@ body.cf-authed .sync-status {
 .mobile-header .sync-status {
   margin-left: 2px;
 }
+
+.sync-status.is-error {
+  background: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.2);
+}

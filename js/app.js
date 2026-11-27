@@ -915,9 +915,13 @@ class FinApp {
 
     let mode = 'ok';
     let label = 'Tersinkron';
+
     if (syncing) {
       mode = 'syncing';
       label = 'Menyinkronkan…';
+    } else if (this.lastSyncError) {
+      mode = 'error';
+      label = 'Gagal sinkron: ' + this.lastSyncError + ' (' + queueCount + ' data menunggu)';
     } else if (offline) {
       mode = 'offline';
       label = queueCount > 0 ? 'Offline — ' + queueCount + ' data menunggu' : 'Offline — data tersimpan di perangkat';
@@ -927,7 +931,7 @@ class FinApp {
     }
 
     dots.forEach(dot => {
-      dot.classList.remove('is-offline', 'is-syncing', 'is-ok');
+      dot.classList.remove('is-offline', 'is-syncing', 'is-ok', 'is-error');
       dot.classList.add('is-' + mode);
       dot.title = label;
       dot.setAttribute('aria-label', 'Status sinkronisasi: ' + label);
@@ -1068,12 +1072,14 @@ class FinApp {
           store.removeSyncItem(item.id);
           processed += 1;
         } catch (error) {
-          console.warn('[CashFlow] Antrean tertahan:', error && error.message);
+          this.lastSyncError = error && error.message ? String(error.message).slice(0, 120) : 'tidak diketahui';
+          console.warn('[CashFlow] Antrean tertahan:', this.lastSyncError);
           break;
         }
       }
     } finally {
       this.queueRunning = false;
+      if (store.getSyncQueue().length === 0) this.lastSyncError = '';
     }
 
     if (processed > 0) {
@@ -1544,7 +1550,7 @@ class FinApp {
     reader.onload = (e) => {
       const preflight = window.financeStore.validateBackup(e.target.result);
       if (!preflight.valid) {
-        alert('File backup tidak valid: ' + preflight.error);
+        this.showToast('Backup tidak valid: ' + preflight.error);
         return;
       }
 
@@ -1564,7 +1570,7 @@ class FinApp {
         this.render();
         this.processSyncQueue();
       } else {
-        alert('Gagal memulihkan backup: ' + result.error);
+        this.showToast('Gagal memulihkan backup: ' + result.error);
       }
     };
     reader.readAsText(file);

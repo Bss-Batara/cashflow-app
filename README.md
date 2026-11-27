@@ -103,3 +103,46 @@ Cukup buka folder proyek ini dan **klik dua kali** file `index.html`. Aplikasi l
 Jika ingin web ini bisa diakses kapan saja dari mana saja (bahkan saat laptop mati atau di luar rumah):
 1. **GitHub Pages (Gratis)**: Upload folder ini ke repository GitHub, lalu aktifkan *GitHub Pages* di pengaturan repository.
 2. **Vercel / Netlify (Gratis)**: Cukup drag-and-drop folder `finflow-app` ke dashboard Netlify atau import repository ke Vercel. Karena tidak butuh build step rumit, web akan langsung aktif dalam hitungan detik!
+
+---
+
+## Testing
+
+```bash
+node server.js                 # server lokal (terminal 1)
+node --test test/core.test.mjs # unit test logika data (tanpa browser)
+node test/e2e-smoke.mjs        # uji browser headless (butuh server lokal)
+```
+
+Test memakai data dummy dan API tiruan; tidak mengirim apa pun ke Spreadsheet.
+Jika Chrome tidak ada di lokasi default, set `CF_CHROME` ke path Chrome Anda.
+
+## Perilaku sinkronisasi
+
+- Data ditulis ke perangkat lebih dulu, lalu masuk antrean (`sync_queue`).
+- Antrean dikirim otomatis saat online, saat aplikasi dibuka, dan setiap tab aktif kembali.
+- Item hanya dihapus dari antrean setelah server membalas sukses.
+- Titik status di header: hijau (tersinkron), biru berdenyut (mengirim), kuning (offline/menunggu),
+  merah (gagal — arahkan kursor untuk melihat pesan).
+- Tarik data dari Spreadsheet tidak menghapus data yang masih menunggu di antrean.
+
+## Troubleshooting
+
+| Gejala | Tindakan |
+|---|---|
+| Titik merah "Gagal sinkron" | Periksa koneksi; buka menu Pengaturan → muat ulang halaman. Data tetap aman di perangkat dan akan dicoba lagi otomatis. |
+| Angka beda antar perangkat | Pastikan bulan/tahun di filter sama; tarik data dengan memuat ulang halaman. |
+| Login gagal setelah pembaruan | Lakukan hard refresh (Ctrl+Shift+R) agar aset baru terpakai. |
+| Data hilang dari tampilan | Cek antrean belum terkirim; jangan hapus data situs. Unduh backup terlebih dahulu. |
+| File backup ditolak | Pesan menyebut bagian yang gagal (mis. transaksi ke-3). Perbaiki file atau gunakan backup lain. |
+
+## Release & rollback
+
+1. `git push origin main` setelah perubahan frontend.
+2. Backend: `clasp push -f` lalu `clasp deploy -i <DEPLOYMENT_ID> -V <versi> -d "<catatan>"`.
+3. Rollback frontend: `git revert <commit>`.
+4. Rollback backend: `clasp deploy -i <DEPLOYMENT_ID> -V <versi-sebelumnya>`.
+
+## Batasan yang diketahui
+
+Lihat [docs/SECURITY_AND_RELIABILITY.md](docs/SECURITY_AND_RELIABILITY.md).
