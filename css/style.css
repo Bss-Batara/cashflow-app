@@ -1274,64 +1274,71 @@ body {
   }
 }
 
-/* --- Indikator status sinkronisasi --- */
+
+/* --- Indikator sinkronisasi (titik) --- */
 .sync-status {
-  position: fixed;
-  left: 12px;
-  bottom: calc(88px + env(safe-area-inset-bottom, 0px));
-  z-index: 1200;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 14px;
-  font-size: 12px;
-  font-weight: 600;
-  color: #9f1239;
-  background: #ffffff;
-  border: 1px solid #fecdd3;
-  border-radius: 9999px;
-  box-shadow: 0 6px 18px rgba(190, 18, 60, 0.18);
-  pointer-events: none;
+  display: none;
+  flex: 0 0 auto;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #f59e0b;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.18);
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.sync-status[hidden] { display: none !important; }
+body.cf-authed .sync-status {
+  display: inline-block;
+}
 
 .sync-status.is-offline {
-  color: #9a3412;
-  background: #fff7ed;
-  border-color: #fed7aa;
+  background: #f59e0b;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.18);
 }
 
 .sync-status.is-syncing {
-  color: #1d4ed8;
-  background: #eff6ff;
-  border-color: #bfdbfe;
+  background: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+  animation: sync-dot-pulse 1s ease-in-out infinite;
 }
 
-.sync-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: currentColor;
+.sync-status.is-ok {
+  background: #16a34a;
+  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.18);
 }
 
-.sync-status.is-syncing .sync-dot {
-  animation: sync-pulse 1s ease-in-out infinite;
-}
-
-@keyframes sync-pulse {
+@keyframes sync-dot-pulse {
   0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.35; transform: scale(0.7); }
+  50% { opacity: 0.4; transform: scale(0.72); }
 }
 
-@media (min-width: 768px) {
-  .sync-status {
-    left: auto;
-    right: 16px;
-    bottom: 16px;
-  }
+@media (prefers-reduced-motion: reduce) {
+  .sync-status.is-syncing { animation: none; }
 }
 
-@media print {
-  .sync-status { display: none !important; }
+/* --- FAB dinamis per halaman --- */
+.fab-btn.is-expense {
+  background: linear-gradient(135deg, #e11d48 0%, #be123c 100%);
+  box-shadow: 0 10px 24px -6px rgba(190, 18, 60, 0.55);
+}
+
+.fab-btn.is-income {
+  background: linear-gradient(135deg, #6ee7b7 0%, #34d399 100%);
+  color: #064e3b;
+  box-shadow: 0 10px 24px -6px rgba(52, 211, 153, 0.55);
+}
+
+.fab-btn.is-invest {
+  background: linear-gradient(135deg, #047857 0%, #065f46 100%);
+  box-shadow: 0 10px 24px -6px rgba(6, 95, 70, 0.55);
+}
+
+.fab-btn[hidden] { display: none !important; }
+
+/* --- Info bulan pada kartu metrik --- */
+.metric-month {
+  margin-top: 4px;
+  font-size: 0.7rem;
+  color: var(--text-muted, #94a3b8);
+  letter-spacing: 0.02em;
 }

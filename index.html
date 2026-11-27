@@ -10,8 +10,8 @@
   <title>CashFlow - Catat Keuangan & Portofolio Investasi</title>
   
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="css/style.css?v=20261127a">
-  <link rel="stylesheet" href="css/login.css?v=20261127a">
+  <link rel="stylesheet" href="css/style.css?v=20261127b">
+  <link rel="stylesheet" href="css/login.css?v=20261127b">
 </head>
 <body>
 
@@ -142,11 +142,6 @@
   </section>
 
   <!-- INDIKATOR SINKRONISASI -->
-  <div id="sync-status" class="sync-status" hidden>
-    <span class="sync-dot" aria-hidden="true"></span>
-    <span id="sync-status-text">Menyinkronkan…</span>
-  </div>
-
   <div class="app-container">
     
     <!-- DESKTOP SIDEBAR -->
@@ -207,7 +202,8 @@
             <div id="mobile-header-subtitle" class="text-xs text-muted">Ringkasan Keuangan</div>
           </div>
         </div>
-        <div style="display: flex; gap: 6px;">
+        <div style="display: flex; gap: 6px; align-items: center;">
+          <span class="sync-status" data-sync-dot role="status" aria-label="Status sinkronisasi" title="Status sinkronisasi"></span>
           <button class="btn btn-rp-keluar btn-sm" onclick="app.openTxModal('expense')">
             <span>Rp Keluar</span>
           </button>
@@ -227,6 +223,7 @@
           <p id="desktop-page-desc" class="text-sm text-secondary">Pantau cash flow, pengeluaran harian, dan pertumbuhan portofolio investasi</p>
         </div>
         <div class="header-actions">
+          <span class="sync-status" data-sync-dot role="status" aria-label="Status sinkronisasi" title="Status sinkronisasi"></span>
           <button class="btn btn-rp-keluar" onclick="app.openTxModal('expense')">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
             <span>Rp Keluar</span>
@@ -266,6 +263,7 @@
             </div>
             <div id="dash-total-income" class="metric-value text-income">Rp 0</div>
             <div class="metric-sub">Bulan ini & pemasukan aktif</div>
+            <div class="metric-month" id="dash-month-income">(—)</div>
           </div>
 
           <div class="metric-card expense">
@@ -275,6 +273,7 @@
             </div>
             <div id="dash-total-expense" class="metric-value text-expense">Rp 0</div>
             <div class="metric-sub">Kebutuhan harian & tagihan</div>
+            <div class="metric-month" id="dash-month-expense">(—)</div>
           </div>
 
           <div class="metric-card netflow">
@@ -284,6 +283,7 @@
             </div>
             <div id="dash-net-cashflow" class="metric-value">Rp 0</div>
             <div id="dash-savings-rate" class="metric-sub">Savings Rate: 0%</div>
+            <div class="metric-month" id="dash-month-net">(—)</div>
           </div>
 
           <div class="metric-card portfolio">
@@ -293,6 +293,7 @@
             </div>
             <div id="dash-portfolio-val" class="metric-value" style="color: var(--accent-gold);">Rp 0</div>
             <div id="dash-portfolio-gain" class="metric-sub">Return: Rp 0 (+0%)</div>
+            <div class="metric-month" id="dash-month-portfolio">(—)</div>
           </div>
         </div>
 
@@ -684,8 +685,8 @@
   </div>
 
   <!-- FLOATING ACTION BUTTON (MOBILE ONLY) -->
-  <button class="fab-btn" onclick="app.openTxModal('expense')" title="Rp Keluar">
-    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+  <button id="fab-btn" class="fab-btn" onclick="app.handleFabClick()" title="Tambah transaksi">
+    <span id="fab-icon" aria-hidden="true"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
   </button>
 
   <!-- MOBILE BOTTOM NAVIGATION -->
@@ -831,11 +832,11 @@
   <div id="toast-container" class="toast-container"></div>
 
   <!-- SCRIPTS -->
-  <script src="js/api.js?v=20261127a"></script>
-  <script src="js/store.js?v=20261127a"></script>
-  <script src="js/charts.js?v=20261127a"></script>
-  <script src="js/auth.js?v=20261127a"></script>
-  <script src="js/app.js?v=20261127a"></script>
+  <script src="js/api.js?v=20261127b"></script>
+  <script src="js/store.js?v=20261127b"></script>
+  <script src="js/charts.js?v=20261127b"></script>
+  <script src="js/auth.js?v=20261127b"></script>
+  <script src="js/app.js?v=20261127b"></script>
 
   <!-- SERVICE WORKER (PWA installable) -->
   <script>

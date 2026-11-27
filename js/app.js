@@ -106,6 +106,7 @@ class FinApp {
     this.populateSettingsForm();
     this.render();
     this.checkNetworkInfo();
+    this.updateFab(this.currentView || 'dashboard');
 
     // Subscribe to data changes
     window.financeStore.subscribe(() => {
@@ -246,6 +247,7 @@ class FinApp {
     }
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    this.updateFab(viewName);
     this.render();
     setTimeout(() => {
       this.renderCharts();
@@ -270,7 +272,66 @@ class FinApp {
   }
 
   // --- Dashboard View ---
+  handleFabClick() {
+    const view = this.currentView || 'dashboard';
+    if (view === 'expenses') return this.openTxModal('expense');
+    if (view === 'income') return this.openTxModal('income');
+    if (view === 'portfolio') return this.openInvestModal();
+    return null;
+  }
+
+  updateFab(view) {
+    const button = document.getElementById('fab-btn');
+    const icon = document.getElementById('fab-icon');
+    if (!button) return;
+
+    const arrowUp = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>';
+    const arrowDown = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>';
+    const plus = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
+
+    button.classList.remove('is-expense', 'is-income', 'is-invest');
+
+    if (view === 'expenses') {
+      button.hidden = false;
+      button.classList.add('is-expense');
+      button.title = 'Catat pengeluaran (Rp Keluar)';
+      button.setAttribute('aria-label', 'Catat pengeluaran');
+      if (icon) icon.innerHTML = arrowUp;
+      return;
+    }
+    if (view === 'income') {
+      button.hidden = false;
+      button.classList.add('is-income');
+      button.title = 'Catat pemasukan (Rp Masuk)';
+      button.setAttribute('aria-label', 'Catat pemasukan');
+      if (icon) icon.innerHTML = arrowDown;
+      return;
+    }
+    if (view === 'portfolio') {
+      button.hidden = false;
+      button.classList.add('is-invest');
+      button.title = 'Tambah aset (Rp Nabung)';
+      button.setAttribute('aria-label', 'Tambah aset investasi');
+      if (icon) icon.innerHTML = plus;
+      return;
+    }
+
+    button.hidden = true;
+  }
+
+  updateMonthLabels() {
+    const names = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+    const label = '(' + names[new Date().getMonth()] + ')';
+    ['dash-month-income', 'dash-month-expense', 'dash-month-net', 'dash-month-portfolio']
+      .forEach(id => {
+        const node = document.getElementById(id);
+        if (node) node.textContent = label;
+      });
+  }
+
   renderDashboard() {
+    this.updateMonthLabels();
     const cf = window.financeStore.getCashFlowMetrics();
     const port = window.financeStore.getPortfolioMetrics();
     const daily = window.financeStore.getDailyMetrics();
@@ -738,35 +799,32 @@ class FinApp {
 
   // --- Status & antrean sinkronisasi ---
   updateSyncStatus(state) {
-    const box = document.getElementById('sync-status');
-    const label = document.getElementById('sync-status-text');
-    if (!box || !label) return;
+    const dots = document.querySelectorAll('[data-sync-dot]');
+    if (!dots.length) return;
 
     const queueCount = window.financeStore.getSyncQueue().length;
-    const syncing = state === 'syncing' || this.syncingQueue === true;
+    const syncing = state === 'syncing' || this.queueRunning === true;
     const offline = !navigator.onLine;
 
-    box.classList.remove('is-offline', 'is-syncing');
-    if (offline) {
-      box.hidden = false;
-      box.classList.add('is-offline');
-      label.textContent = queueCount > 0
-        ? 'Offline — ' + queueCount + ' data menunggu sinkron'
-        : 'Offline — data tersimpan di perangkat';
-      return;
-    }
+    let mode = 'ok';
+    let label = 'Tersinkron';
     if (syncing) {
-      box.hidden = false;
-      box.classList.add('is-syncing');
-      label.textContent = 'Menyinkronkan…';
-      return;
+      mode = 'syncing';
+      label = 'Menyinkronkan…';
+    } else if (offline) {
+      mode = 'offline';
+      label = queueCount > 0 ? 'Offline — ' + queueCount + ' data menunggu' : 'Offline — data tersimpan di perangkat';
+    } else if (queueCount > 0) {
+      mode = 'offline';
+      label = queueCount + ' data menunggu sinkron';
     }
-    if (queueCount > 0) {
-      box.hidden = false;
-      label.textContent = queueCount + ' data menunggu sinkron';
-      return;
-    }
-    box.hidden = true;
+
+    dots.forEach(dot => {
+      dot.classList.remove('is-offline', 'is-syncing', 'is-ok');
+      dot.classList.add('is-' + mode);
+      dot.title = label;
+      dot.setAttribute('aria-label', 'Status sinkronisasi: ' + label);
+    });
   }
 
   async processSyncQueue() {
