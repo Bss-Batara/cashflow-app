@@ -88,6 +88,9 @@ class FinApp {
   constructor() {
     window.app = this;
     this.currentView = 'dashboard';
+    const today = new Date();
+    this.dashYear = today.getFullYear();
+    this.dashMonth = today.getMonth();
     this.expenseFilter = 'today';
     this.expenseCategory = 'all';
     this.expenseSearchQuery = '';
@@ -107,6 +110,7 @@ class FinApp {
     this.render();
     this.checkNetworkInfo();
     this.updateFab(this.currentView || 'dashboard');
+    this.initDashboardPeriod();
 
     // Subscribe to data changes
     window.financeStore.subscribe(() => {
@@ -322,7 +326,8 @@ class FinApp {
   updateMonthLabels() {
     const names = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
       'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
-    const label = '(' + names[new Date().getMonth()] + ')';
+    const label = '(' + (names[this.dashMonth] || '') + ')';
+
     ['dash-month-income', 'dash-month-expense', 'dash-month-net', 'dash-month-portfolio']
       .forEach(id => {
         const node = document.getElementById(id);
@@ -330,11 +335,88 @@ class FinApp {
       });
   }
 
+  dashboardPeriodKey() {
+    return this.dashYear + '-' + String(this.dashMonth + 1).padStart(2, '0');
+  }
+
+  getDashboardTransactions() {
+    const key = this.dashboardPeriodKey();
+    return window.financeStore.getTransactions()
+      .filter(tx => String(tx.date || '').slice(0, 7) === key);
+  }
+
+  computeDashboardMetrics() {
+    const rows = this.getDashboardTransactions();
+    let income = 0;
+    let expense = 0;
+
+    rows.forEach(tx => {
+      const amount = Number(tx.amount) || 0;
+      if (tx.type === 'income') income += amount;
+      else if (tx.type === 'expense') expense += amount;
+    });
+
+    const net = income - expense;
+    return {
+      income: income,
+      expense: expense,
+      net: net,
+      savingsRate: income > 0 ? (net / income) * 100 : 0,
+      count: rows.length
+    };
+  }
+
+  refreshDashboardYears() {
+    const yearSelect = document.getElementById('dash-year-select');
+    if (!yearSelect) return;
+
+    const years = new Set([new Date().getFullYear()]);
+    window.financeStore.getTransactions().forEach(tx => {
+      const year = parseInt(String(tx.date || '').slice(0, 4), 10);
+      if (Number.isFinite(year) && year > 2000) years.add(year);
+    });
+    if (!years.has(this.dashYear)) years.add(this.dashYear);
+
+    const sorted = Array.from(years).sort((a, b) => b - a);
+    yearSelect.innerHTML = sorted.map(year => '<option value="' + year + '">' + year + '</option>').join('');
+    yearSelect.value = String(this.dashYear);
+  }
+
+  initDashboardPeriod() {
+    const monthSelect = document.getElementById('dash-month-select');
+    const yearSelect = document.getElementById('dash-year-select');
+    if (!monthSelect || !yearSelect) return;
+
+    const names = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+
+    monthSelect.innerHTML = names
+      .map((name, index) => '<option value="' + index + '">' + name + '</option>')
+      .join('');
+    monthSelect.value = String(this.dashMonth);
+
+    this.refreshDashboardYears();
+    yearSelect.value = String(this.dashYear);
+
+    monthSelect.addEventListener('change', () => {
+      this.dashMonth = Number(monthSelect.value);
+      this.renderDashboard();
+      this.renderCharts();
+    });
+
+    yearSelect.addEventListener('change', () => {
+      this.dashYear = Number(yearSelect.value);
+      this.renderDashboard();
+      this.renderCharts();
+    });
+  }
+
   renderDashboard() {
-    this.updateMonthLabels();
-    const cf = window.financeStore.getCashFlowMetrics();
+    const cf = this.computeDashboardMetrics();
     const port = window.financeStore.getPortfolioMetrics();
     const daily = window.financeStore.getDailyMetrics();
+    this.refreshDashboardYears();
+    this.updateMonthLabels();
 
     // Top metrics
     const incomeEl = document.getElementById('dash-total-income');
@@ -344,19 +426,19 @@ class FinApp {
     const portValEl = document.getElementById('dash-portfolio-val');
     const portGainEl = document.getElementById('dash-portfolio-gain');
 
-    if (incomeEl) incomeEl.textContent = window.formatIDR(cf.totalIncome);
-    if (expenseEl) expenseEl.textContent = window.formatIDR(cf.totalExpense);
+    if (incomeEl) incomeEl.textContent = window.formatIDR(cf.income);
+    if (expenseEl) expenseEl.textContent = window.formatIDR(cf.expense);
     if (netCashflowEl) {
-      netCashflowEl.textContent = window.formatIDR(cf.netCashFlow);
-      netCashflowEl.className = 'metric-value ' + (cf.netCashFlow >= 0 ? 'text-income' : 'text-expense');
+      netCashflowEl.textContent = window.formatIDR(cf.net);
+      netCashflowEl.className = 'metric-value ' + (cf.net >= 0 ? 'text-income' : 'text-expense');
     }
     if (savingsRateEl) {
-      savingsRateEl.textContent = `Tingkat Tabungan: ${cf.savingsRate.toFixed(1)}%`;
+      savingsRateEl.textContent = 'Tingkat Tabungan: ' + cf.savingsRate.toFixed(1) + '%';
     }
     if (portValEl) portValEl.textContent = window.formatIDR(port.totalCurrentValue);
     if (portGainEl) {
       const isPos = port.totalProfitLoss >= 0;
-      portGainEl.textContent = `Return: ${window.formatIDR(port.totalProfitLoss)} (${window.formatPercent(port.totalProfitLossPercent)})`;
+      portGainEl.textContent = 'Return: ' + window.formatIDR(port.totalProfitLoss) + ' (' + window.formatPercent(port.totalProfitLossPercent) + ')';
       portGainEl.style.color = isPos ? 'var(--income-color)' : 'var(--expense-color)';
     }
 
@@ -652,31 +734,48 @@ class FinApp {
   // --- Charts Rendering ---
   renderCharts() {
     // 1. Cash Flow Bar Chart
-    const transactions = window.financeStore.getTransactions();
-    const last7Days = [];
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      const dateStr = d.toISOString().split('T')[0];
-      const dayName = d.toLocaleDateString('id-ID', { weekday: 'short' });
+    const transactions = this.getDashboardTransactions();
+    const today = new Date();
+    const isCurrentMonth = this.dashYear === today.getFullYear() && this.dashMonth === today.getMonth();
+    const series = [];
 
-      let inc = 0;
-      let exp = 0;
-      transactions.forEach(t => {
-        if (t.date === dateStr) {
-          if (t.type === 'income') inc += t.amount;
-          if (t.type === 'expense') exp += t.amount;
-        }
-      });
+    if (isCurrentMonth) {
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const dateStr = d.toISOString().split('T')[0];
+        const dayName = d.toLocaleDateString('id-ID', { weekday: 'short' });
 
-      last7Days.push({
-        label: dayName,
-        income: inc,
-        expense: exp
-      });
+        let inc = 0;
+        let exp = 0;
+        transactions.forEach(t => {
+          if (String(t.date || '').slice(0, 10) === dateStr) {
+            if (t.type === 'income') inc += t.amount;
+            if (t.type === 'expense') exp += t.amount;
+          }
+        });
+        series.push({ label: dayName, income: inc, expense: exp });
+      }
+    } else {
+      const daysInMonth = new Date(this.dashYear, this.dashMonth + 1, 0).getDate();
+      const weeks = Math.ceil(daysInMonth / 7);
+      for (let w = 0; w < weeks; w += 1) {
+        const from = w * 7 + 1;
+        const to = Math.min(daysInMonth, from + 6);
+        let inc = 0;
+        let exp = 0;
+        transactions.forEach(t => {
+          const day = parseInt(String(t.date || '').slice(8, 10), 10);
+          if (Number.isFinite(day) && day >= from && day <= to) {
+            if (t.type === 'income') inc += t.amount;
+            if (t.type === 'expense') exp += t.amount;
+          }
+        });
+        series.push({ label: 'Mgg ' + (w + 1), income: inc, expense: exp });
+      }
     }
 
-    window.FinCharts.renderCashFlowChart('cashflow-bar-chart', last7Days);
+    window.FinCharts.renderCashFlowChart('cashflow-bar-chart', series);
 
     // 2. Portfolio Allocation Donut
     const port = window.financeStore.getPortfolioMetrics();
