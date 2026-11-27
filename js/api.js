@@ -36,9 +36,14 @@ const CashflowApi = {
     const resolved = action === 'list' ? 'listTransactions' : action;
     const params = { ...parameters };
     if (this.token_ && !params.token) params.token = this.token_;
+
+    // Token sesi TIDAK boleh muncul di URL: permintaan ber-token dikirim via POST.
+    if (this.token_) {
+      return this.post(resolved, params);
+    }
+
     const query = new URLSearchParams({ action: resolved, ...params }).toString();
 
-    // Gabungkan permintaan identik yang berjalan bersamaan.
     if (!this.inflight_) this.inflight_ = new Map();
     if (!this.inflight_.has(query)) {
       const request = this.fetchJson_(`${CASHFLOW_API_URL}?${query}`)
@@ -92,7 +97,7 @@ const CashflowApi = {
 
   async fetchJson_(url, options = {}) {
     if (typeof fetch !== 'function') {
-      return options.method === 'POST' ? this.postForm_(url, options) : this.getJsonp_(url);
+      throw new Error('Browser ini tidak mendukung koneksi aman (fetch). Silakan perbarui browser Anda.');
     }
 
     const controller = typeof AbortController === 'function' ? new AbortController() : null;

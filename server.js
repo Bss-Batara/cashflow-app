@@ -38,9 +38,42 @@ function getLocalIPAddresses() {
   return addresses;
 }
 
+function sendPlain(res, statusCode, message) {
+  res.writeHead(statusCode, { 'Content-Type': 'text/plain; charset=utf-8' });
+  res.end(message);
+}
+
+/**
+ * Validasi path: decode aman, tolak null byte, pastikan hasil resolve tetap
+ * berada di dalam public directory (termasuk setelah symlink di-resolve).
+ */
+function resolvePublicPath(rawPath) {
+  let decoded;
+  try {
+    decoded = decodeURIComponent(rawPath);
+  } catch (error) {
+    return null;
+  }
+
+  if (decoded.includes('\0')) return null;
+
+  const candidate = path.resolve(PUBLIC_DIR, '.' + decoded);
+  const relative = path.relative(PUBLIC_DIR, candidate);
+
+  if (relative.startsWith('..') || path.isAbsolute(relative)) return null;
+
+  const segments = relative.split(path.sep).filter(Boolean);
+  // Jangan sajikan source/config server maupun folder backend & backup.
+  const blocked = new Set(['server.js', 'package.json', 'start.bat', '_backup', 'backend', 'test', '.github']);
+  if (segments.some(segment => blocked.has(segment.toLowerCase()))) return null;
+  if (segments.some(segment => segment.startsWith('.'))) return null;
+
+  return candidate;
+}
+
 const server = http.createServer((req, res) => {
   const parsedUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
-  let reqPath = decodeURI(parsedUrl.pathname);
+  let reqPath = parsedUrl.pathname;
 
   // API endpoint to get LAN IP for mobile
   if (reqPath === '/api/network-info') {
@@ -59,33 +92,43 @@ const server = http.createServer((req, res) => {
     reqPath = '/index.html';
   }
 
-  const filePath = path.normalize(path.join(PUBLIC_DIR, reqPath));
-
-  // Security check to avoid directory traversal
-  if (!filePath.startsWith(PUBLIC_DIR)) {
-    res.writeHead(403, { 'Content-Type': 'text/plain' });
-    res.end('403 Forbidden');
+  const filePath = resolvePublicPath(reqPath);
+  if (!filePath) {
+    sendPlain(res, 403, '403 Forbidden');
     return;
   }
 
-  fs.stat(filePath, (err, stats) => {
-    if (err || !stats.isFile()) {
-      res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
-      res.end('404 File Not Found: ' + reqPath);
+  fs.realpath(filePath, (realErr, realPath) => {
+    if (realErr) {
+      sendPlain(res, 404, '404 File Not Found');
       return;
     }
 
-    const ext = path.extname(filePath).toLowerCase();
-    const contentType = MIME_TYPES[ext] || 'application/octet-stream';
+    const realRelative = path.relative(PUBLIC_DIR, realPath);
+    if (realRelative.startsWith('..') || path.isAbsolute(realRelative)) {
+      sendPlain(res, 403, '403 Forbidden');
+      return;
+    }
 
-    res.writeHead(200, {
-      'Content-Type': contentType,
-      'Cache-Control': 'no-cache',
-      'Access-Control-Allow-Origin': '*'
+    fs.stat(realPath, (err, stats) => {
+      if (err || !stats.isFile()) {
+        sendPlain(res, 404, '404 File Not Found');
+        return;
+      }
+
+      const ext = path.extname(realPath).toLowerCase();
+      const contentType = MIME_TYPES[ext] || 'application/octet-stream';
+
+      res.writeHead(200, {
+        'Content-Type': contentType,
+        'Cache-Control': 'no-cache',
+        'Access-Control-Allow-Origin': '*'
+      });
+
+      const stream = fs.createReadStream(realPath);
+      stream.on('error', () => sendPlain(res, 500, '500 Internal Server Error'));
+      stream.pipe(res);
     });
-
-    const stream = fs.createReadStream(filePath);
-    stream.pipe(res);
   });
 });
 

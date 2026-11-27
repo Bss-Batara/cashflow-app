@@ -98,21 +98,27 @@ function dispatchApiAction_(action, request) {
         authenticated: Boolean(CASHFLOW_REQUEST_IDENTITY)
       };
     case 'changePassword':
+      requirePost_(request);
       return changeCashflowPassword(payload.token || source.token, payload.currentPassword, payload.newPassword);
     case 'register':
-      // GET diizinkan: frontend memakai JSONP.
+      // Wajib POST: kredensial tidak boleh ada di URL.
+      requirePost_(request);
       return registerUser(payload);
     case 'forgotPassword':
+      requirePost_(request);
       return forgotCashflowPassword(payload);
     case 'resetPassword':
+      requirePost_(request);
       return resetCashflowPassword(payload);
     case 'login':
-      // GET diizinkan: frontend memakai JSONP.
+      // Wajib POST: kredensial tidak boleh ada di URL.
+      requirePost_(request);
       return loginUser(payload);
     case 'logout':
       requirePost_(request);
       return logoutUser(payload.token || source.token);
     case 'me':
+      requirePost_(request);
       return currentUser(payload.token || source.token);
     case 'listTransactions':
       return listTransactions({

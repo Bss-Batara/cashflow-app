@@ -84,6 +84,16 @@ const CATEGORY_ICONS = {
   'Hadiah & Uang Masuk Lain': '✨'
 };
 
+/** Escape teks sebelum masuk ke innerHTML (anti DOM XSS). */
+function escapeHtml(value) {
+  return String(value === null || value === undefined ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 class FinApp {
   constructor() {
     window.app = this;
@@ -632,15 +642,15 @@ class FinApp {
           return `
             <tr>
               <td>
-                <div class="font-bold">${inv.category || inv.name}</div>
-                <div class="text-xs text-muted">${inv.notes ? inv.notes : (inv.name && inv.name !== inv.category ? inv.name : inv.code)}</div>
+                <div class="font-bold">${escapeHtml(inv.category || inv.name)}</div>
+                <div class="text-xs text-muted">${escapeHtml(inv.notes ? inv.notes : (inv.name && inv.name !== inv.category ? inv.name : inv.code))}</div>
               </td>
               <td>
                 <span class="badge" style="background: ${CATEGORY_COLORS[inv.category] || '#6366f1'}25; color: ${CATEGORY_COLORS[inv.category] || '#6366f1'}">
                   ${inv.category}
                 </span>
               </td>
-              <td>${inv.category === 'Dana Darurat' ? '-' : `${inv.units} ${inv.unitName}`}</td>
+              <td>${inv.category === 'Dana Darurat' ? '-' : escapeHtml(inv.units + ' ' + inv.unitName)}</td>
               <td>${window.formatIDR(inv.buyPrice)}</td>
               <td>
                 <span class="font-semibold">${window.formatIDR(inv.currentPrice)}</span>
@@ -655,10 +665,10 @@ class FinApp {
                 </div>
               </td>
               <td style="text-align: right;">
-                <button class="btn btn-secondary btn-sm" onclick="app.quickEditPrice('${inv.id}', ${inv.currentPrice})" title="Update Harga Pasar">
+                <button class="btn btn-secondary btn-sm" onclick="app.quickEditPrice('${escapeHtml(inv.id)}', ${Number(inv.currentPrice) || 0})" title="Update Harga Pasar">
                   ✏️ Update
                 </button>
-                <button class="btn btn-secondary btn-sm" style="color: var(--expense-color); margin-left: 4px;" onclick="app.deleteInvestment('${inv.id}')" title="Hapus Aset">
+                <button class="btn btn-secondary btn-sm" style="color: var(--expense-color); margin-left: 4px;" onclick="app.deleteInvestment('${escapeHtml(inv.id)}')" title="Hapus Aset">
                   🗑️
                 </button>
               </td>
@@ -799,7 +809,7 @@ class FinApp {
         const pct = ((s.value / total) * 100).toFixed(1);
         return `<span style="display: flex; align-items: center; gap: 5px;">
           <span style="width: 8px; height: 8px; border-radius: 2px; background: ${s.color};"></span>
-          ${s.label} (${pct}%)
+          ${escapeHtml(s.label)} (${pct}%)
         </span>`;
       }).join('');
     }
@@ -833,7 +843,7 @@ class FinApp {
           <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem;">
             <div style="display: flex; align-items: center; gap: 8px;">
               <span style="width: 10px; height: 10px; border-radius: 3px; background: ${s.color};"></span>
-              <span>${s.label}</span>
+              <span>${escapeHtml(s.label)}</span>
             </div>
             <div class="font-bold">${window.formatIDR(s.value)} (${pct}%)</div>
           </div>
@@ -856,10 +866,10 @@ class FinApp {
             ${icon}
           </div>
           <div class="tx-details">
-            <div class="tx-title">${tx.title}</div>
+            <div class="tx-title">${escapeHtml(tx.title)}</div>
             <div class="tx-meta">
-              <span class="badge ${isInc ? 'badge-income' : 'badge-expense'}">${tx.category}</span>
-              <span>${tx.date}</span>
+              <span class="badge ${isInc ? 'badge-income' : 'badge-expense'}">${escapeHtml(tx.category)}</span>
+              <span>${escapeHtml(tx.date)}</span>
             </div>
           </div>
         </div>
@@ -868,7 +878,7 @@ class FinApp {
             ${sign} ${window.formatIDR(tx.amount)}
           </div>
           ${showDelete ? `
-            <button class="btn btn-secondary btn-sm" style="padding: 2px 8px; font-size: 0.72rem; color: var(--text-muted);" onclick="app.deleteTransaction('${tx.id}')">
+            <button class="btn btn-secondary btn-sm" style="padding: 2px 8px; font-size: 0.72rem; color: var(--text-muted);" onclick="app.deleteTransaction('${escapeHtml(tx.id)}')">
               Hapus
             </button>
           ` : ''}
@@ -1529,7 +1539,12 @@ class FinApp {
 
     const toast = document.createElement('div');
     toast.className = 'toast';
-    toast.innerHTML = `<span>✓</span> <span>${message}</span>`;
+    const toastIcon = document.createElement('span');
+    toastIcon.textContent = '✓';
+    const toastText = document.createElement('span');
+    toastText.textContent = String(message === null || message === undefined ? '' : message);
+    toast.appendChild(toastIcon);
+    toast.appendChild(toastText);
     container.appendChild(toast);
 
     setTimeout(() => {

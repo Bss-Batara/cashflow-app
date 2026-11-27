@@ -252,7 +252,7 @@
     try {
       const params = { username: username, password: password };
       if (isRegister) params.email = email;
-      const data = await window.CashflowApi.get(isRegister ? 'register' : 'login', params);
+      const data = await window.CashflowApi.post(isRegister ? 'register' : 'login', params);
       finishLogin(data);
     } catch (error) {
       const message = String((error && error.message) || '');
@@ -306,7 +306,7 @@
     showMessage('');
     setButtonBusy(el.forgotSubmit, true, 'Mengirim…');
     try {
-      await window.CashflowApi.get('forgotPassword', { email: email });
+      await window.CashflowApi.post('forgotPassword', { email: email });
       showMessage('Jika email tersebut terdaftar, tautan reset sudah dikirim. Periksa kotak masuk dan folder spam.', true);
       if (el.forgotEmail) el.forgotEmail.value = '';
     } catch (error) {
@@ -342,7 +342,7 @@
     showMessage('');
     setButtonBusy(el.resetSubmit, true, 'Menyimpan…');
     try {
-      await window.CashflowApi.get('resetPassword', {
+      await window.CashflowApi.post('resetPassword', {
         token: state.resetToken,
         newPassword: password
       });
@@ -477,7 +477,7 @@
     if (next.value !== confirm.value) return showError('Konfirmasi password baru tidak sama.');
 
     try {
-      await window.CashflowApi.get('changePassword', {
+      await window.CashflowApi.post('changePassword', {
         currentPassword: current.value,
         newPassword: next.value
       });
@@ -537,7 +537,7 @@
     hideOverlay();
     notify('login');
 
-    window.CashflowApi.get('me')
+    window.CashflowApi.post('me', {})
       .then(function (user) {
         if (user && user.username) {
           writeSession({ token: session.token, username: user.username, expiresAt: user.expiresAt });
