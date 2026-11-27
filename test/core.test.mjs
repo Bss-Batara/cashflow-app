@@ -214,3 +214,20 @@ test('export CSV memakai pemisah koma-titik-koma dan meng-escape sel', () => {
   assert.ok(lines[1].includes('"Kopi; susu"'));
   assert.ok(lines[1].includes('""kutip""'));
 });
+
+test('merge menerapkan edit yang masih menunggu sinkron', () => {
+  const { store } = createStore();
+  store.saveSyncQueue([]);
+  store.enqueueSync('transaction', 'update', {
+    id: 'srv-1', version: 1, type: 'expense', title: 'Judul Baru',
+    amount: 999, category: 'Makanan', date: '2026-11-20', wallet: 'BCA', note: ''
+  });
+  const merged = store.mergeTransactionsWithQueue_([
+    { id: 'srv-1', type: 'income', title: 'Judul Lama', amount: 100, category: 'Gaji', date: '2026-11-19', wallet: 'BCA', note: '', version: 1 }
+  ]);
+  assert.equal(merged.length, 1);
+  assert.equal(merged[0].id, 'srv-1');
+  assert.equal(merged[0].title, 'Judul Baru');
+  assert.equal(merged[0].amount, 999);
+  assert.equal(merged[0].type, 'expense');
+});

@@ -158,7 +158,27 @@ class FinanceStore {
         pending: true
       }));
 
-    return [...extras, ...base];
+    const pendingUpdate = new Map(
+      queue
+        .filter(item => item.kind === 'transaction' && item.op === 'update')
+        .map(item => [String(item.data.id), item.data])
+    );
+
+    return [...extras, ...base].map(row => {
+      const upd = pendingUpdate.get(String(row.id));
+      if (!upd) return row;
+      return {
+        ...row,
+        type: upd.type,
+        title: upd.title,
+        amount: Number(upd.amount) || 0,
+        category: upd.category,
+        date: upd.date,
+        wallet: upd.wallet,
+        note: upd.note,
+        pending: true
+      };
+    });
   }
 
   mergeInvestmentsWithQueue_(serverInvestments) {

@@ -97,6 +97,17 @@ try {
       };
       window.CashflowApi.post = async (action, payload) => {
         if (window.__mock.fail > 0) { window.__mock.fail -= 1; throw new Error('server menolak (uji)'); }
+        if (action === 'updateTransaction') {
+          const row = window.__mock.rows.find(r => r.transactionId === payload.transactionId);
+          if (!row) throw new Error('Transaction not found.');
+          if (payload.expectedVersion !== undefined && Number(row.version) !== Number(payload.expectedVersion)) {
+            throw new Error('Transaction version conflict.');
+          }
+          row.type = payload.type; row.title = payload.title; row.amountMinor = payload.amountMinor;
+          row.categoryId = payload.categoryId; row.transactionDate = payload.transactionDate;
+          row.wallet = payload.wallet; row.note = payload.note; row.version = Number(row.version) + 1;
+          return { ok: true };
+        }
         if (action === 'createTransaction') window.__mock.rows.push({ ...payload });
         return { ok: true };
       };

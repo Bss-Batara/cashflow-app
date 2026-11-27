@@ -878,6 +878,9 @@ class FinApp {
             ${sign} ${window.formatIDR(tx.amount)}
           </div>
           ${showDelete ? `
+            <button class="btn btn-secondary btn-sm" style="padding: 2px 8px; font-size: 0.72rem;" onclick="app.editTransaction('${escapeHtml(tx.id)}')">
+              Edit
+            </button>
             <button class="btn btn-secondary btn-sm" style="padding: 2px 8px; font-size: 0.72rem; color: var(--text-muted);" onclick="app.deleteTransaction('${escapeHtml(tx.id)}')">
               Hapus
             </button>
@@ -1030,7 +1033,37 @@ class FinApp {
               });
               txSend.set(key, left - 1);
             }
-          } else if (item.kind === 'transaction' && item.op === 'void') {
+          } else if (item.kind === 'transaction' && item.op === 'update') {
+          const current = await api.get('listTransactions', { includeVoided: 'true' });
+          const row = (current.items || []).find(tx => tx.transactionId === item.data.id);
+
+          if (row && row.status !== 'void') {
+            const wantedCategory = await api.resolveCategoryId(item.data.category, item.data.type);
+            const sameValues =
+              String(row.type || '') === String(item.data.type || '') &&
+              String(row.title || '') === String(item.data.title || '') &&
+              Number(row.amountMinor) === Math.round(Number(item.data.amount) || 0) &&
+              String(row.categoryId || '') === String(wantedCategory || '') &&
+              this.toIsoDate_(row.transactionDate) === String(item.data.date || '').slice(0, 10) &&
+              String(row.wallet || '') === String(item.data.wallet || '') &&
+              String(row.note || '') === String(item.data.note || '');
+
+            if (!sameValues) {
+              await api.post('updateTransaction', {
+                transactionId: item.data.id,
+                expectedVersion: row.version,
+                type: item.data.type,
+                title: item.data.title,
+                amountMinor: Math.round(Number(item.data.amount) || 0),
+                currency: 'IDR',
+                categoryId: wantedCategory,
+                transactionDate: item.data.date,
+                wallet: item.data.wallet || '',
+                note: item.data.note || ''
+              });
+            }
+          }
+        } else if (item.kind === 'transaction' && item.op === 'void') {
             const current = await api.get('listTransactions', { includeVoided: 'true' });
             const row = (current.items || []).find(tx => tx.transactionId === item.data.id);
             if (row && row.status !== 'void') {
@@ -1154,6 +1187,63 @@ class FinApp {
    * Simpan transaksi: tulis ke localStorage lebih dulu, lalu kirim ke
    * Spreadsheet. Bila pengiriman gagal, data lokal tetap tersimpan.
    */
+  async updateTransactionWithSync(id, patch) {
+    const store = window.financeStore;
+    const existing = store.getTransactions().find(item => String(item.id) === String(id));
+    if (!existing) {
+      this.showToast('Transaksi tidak ditemukan.');
+      return { synced: false, error: 'not_found' };
+    }
+
+    const updated = {
+      ...existing,
+      type: patch.type,
+      title: patch.title,
+      amount: Number(patch.amount) || 0,
+      category: patch.category,
+      date: patch.date,
+      wallet: patch.wallet || existing.wallet || 'Utama',
+      note: patch.note === undefined ? existing.note : patch.note
+    };
+
+    store.saveTransactions(
+      store.getTransactions().map(item => (String(item.id) === String(id) ? updated : item))
+    );
+
+    const isLocalOnly = String(id).startsWith('tx-') || String(id).startsWith('queue-');
+
+    if (isLocalOnly) {
+      // Belum pernah terkirim: cukup perbarui isi antrean create.
+      const queue = store.getSyncQueue().map(item => {
+        if (item.kind === 'transaction' && item.op === 'create' && String(item.data.id) === String(id)) {
+          return { ...item, data: { ...item.data, ...updated } };
+        }
+        return item;
+      });
+      store.saveSyncQueue(queue);
+      return { synced: !navigator.onLine ? false : true, localOnly: true };
+    }
+
+    store.enqueueSync('transaction', 'update', {
+      id: id,
+      version: existing.version,
+      type: updated.type,
+      title: updated.title,
+      amount: updated.amount,
+      category: updated.category,
+      date: updated.date,
+      wallet: updated.wallet,
+      note: updated.note
+    });
+    this.updateSyncStatus();
+
+    await this.processSyncQueue();
+    const stillPending = store.getSyncQueue().some(item =>
+      item.kind === 'transaction' && item.op === 'update' && String(item.data.id) === String(id)
+    );
+    return { synced: !stillPending };
+  }
+
   async saveTransactionWithSync(tx) {
     const localTx = {
       id: 'tx-' + Date.now(),
@@ -1199,16 +1289,36 @@ class FinApp {
   }
 
   // --- Transaction Modal & Form ---
-  openTxModal(type = 'expense') {
+  openTxModal(type = 'expense', txToEdit = null) {
+    this.editingTxId = txToEdit ? txToEdit.id : null;
     this.setTxModalType(type);
+
     const dateInput = document.getElementById('tx-input-date');
-    if (dateInput) dateInput.value = new Date().toISOString().split('T')[0];
-
     const amountInput = document.getElementById('tx-input-amount');
-    if (amountInput) amountInput.value = '';
+    const titleInput = document.getElementById('tx-input-title');
+    const categoryInput = document.getElementById('tx-input-category');
 
-    const preview = document.getElementById('tx-amount-preview');
-    if (preview) preview.style.display = 'none';
+    if (txToEdit) {
+      if (dateInput) dateInput.value = String(txToEdit.date || '').slice(0, 10);
+      if (amountInput) amountInput.value = Number(txToEdit.amount) || 0;
+      if (titleInput) titleInput.value = txToEdit.title || '';
+      if (categoryInput) {
+        if (txToEdit.category && !Array.from(categoryInput.options).some(opt => opt.value === txToEdit.category)) {
+          const extra = document.createElement('option');
+          extra.value = txToEdit.category;
+          extra.textContent = txToEdit.category;
+          categoryInput.appendChild(extra);
+        }
+        categoryInput.value = txToEdit.category || categoryInput.value;
+      }
+      if (amountInput) this.updateAmountPreview(amountInput.value);
+    } else {
+      if (dateInput) dateInput.value = new Date().toISOString().split('T')[0];
+      if (amountInput) amountInput.value = '';
+      if (titleInput) titleInput.value = '';
+      const preview = document.getElementById('tx-amount-preview');
+      if (preview) preview.style.display = 'none';
+    }
 
     document.getElementById('tx-modal').classList.add('active');
     setTimeout(() => {
@@ -1216,7 +1326,17 @@ class FinApp {
     }, 100);
   }
 
+  editTransaction(id) {
+    const tx = window.financeStore.getTransactions().find(item => String(item.id) === String(id));
+    if (!tx) {
+      this.showToast('Transaksi tidak ditemukan.');
+      return;
+    }
+    this.openTxModal(tx.type, tx);
+  }
+
   closeTxModal() {
+    this.editingTxId = null;
     document.getElementById('tx-modal').classList.remove('active');
     document.getElementById('tx-form').reset();
     const preview = document.getElementById('tx-amount-preview');
@@ -1228,22 +1348,23 @@ class FinApp {
     const submitBtn = document.getElementById('tx-submit-btn');
     const titleEl = document.getElementById('tx-modal-title');
     const titleInput = document.getElementById('tx-input-title');
+    const editing = Boolean(this.editingTxId);
 
     if (typeInput) typeInput.value = type;
     if (type === 'expense') {
       if (submitBtn) {
         submitBtn.className = 'btn btn-rp-keluar';
-        submitBtn.textContent = 'Simpan Rp Keluar';
+        submitBtn.textContent = editing ? 'Simpan Perubahan' : 'Simpan Rp Keluar';
       }
-      if (titleEl) titleEl.textContent = 'Catat Rp Keluar';
+      if (titleEl) titleEl.textContent = editing ? 'Edit Transaksi' : 'Catat Rp Keluar';
       if (titleInput) titleInput.placeholder = 'Contoh: Makan Siang Nasi Padang';
       this.populateCategoryOptions('expense');
     } else {
       if (submitBtn) {
         submitBtn.className = 'btn btn-rp-masuk';
-        submitBtn.textContent = 'Simpan Rp Masuk';
+        submitBtn.textContent = editing ? 'Simpan Perubahan' : 'Simpan Rp Masuk';
       }
-      if (titleEl) titleEl.textContent = 'Catat Rp Masuk';
+      if (titleEl) titleEl.textContent = editing ? 'Edit Transaksi' : 'Catat Rp Masuk';
       if (titleInput) titleInput.placeholder = 'Contoh: Gaji Bulanan / Freelance';
       this.populateCategoryOptions('income');
     }
@@ -1301,21 +1422,28 @@ class FinApp {
       return;
     }
 
+    const payload = { type, amount, title, category, wallet: 'Utama', date, note: '' };
+
+    if (this.editingTxId) {
+      const editedId = this.editingTxId;
+      this.closeTxModal();
+      this.updateTransactionWithSync(editedId, payload).then(result => {
+        this.showToast(result && result.error
+          ? 'Gagal menyimpan perubahan: ' + result.error
+          : (result && result.synced === false
+            ? 'Perubahan tersimpan lokal, menunggu sinkron'
+            : 'Perubahan berhasil disimpan'));
+      });
+      return;
+    }
+
     const successMessage = type === 'expense'
       ? 'Rp Keluar berhasil dicatat!'
       : 'Rp Masuk berhasil ditambahkan!';
 
-    this.saveTransactionWithSync({
-      type,
-      amount,
-      title,
-      category,
-      wallet: 'Utama',
-      date,
-      note: ''
-    }).then(result => {
+    this.saveTransactionWithSync(payload).then(result => {
       this.showToast(result && result.synced === false
-        ? `${successMessage} (lokal, belum sinkron)`
+        ? successMessage + ' (lokal, belum sinkron)'
         : successMessage);
     });
 
