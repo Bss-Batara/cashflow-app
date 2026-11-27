@@ -557,3 +557,145 @@ function changeCashflowPassword(token, currentPassword, newPassword) {
 
   return { changed: true, otherSessionsRevoked: revoked };
 }
+/* ============================================================
+   Reset password lewat email (token sekali pakai, 15 menit).
+   ============================================================ */
+
+var CASHFLOW_RESET_PROPERTY = 'CASHFLOW_RESET_TOKENS_V1';
+var CASHFLOW_RESET_TTL_MS = 15 * 60 * 1000;
+var CASHFLOW_APP_URL = 'https://bss-batara.github.io/cashflow-app/';
+
+function readCashflowResetTokens_() {
+  var raw = PropertiesService.getScriptProperties().getProperty(CASHFLOW_RESET_PROPERTY);
+  if (!raw) return {};
+  try {
+    var parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch (error) {
+    return {};
+  }
+}
+
+function writeCashflowResetTokens_(tokens) {
+  var now = Date.now();
+  var active = {};
+  Object.keys(tokens).forEach(function (token) {
+    if (tokens[token] && tokens[token].expiresAt > now) active[token] = tokens[token];
+  });
+  PropertiesService.getScriptProperties()
+    .setProperty(CASHFLOW_RESET_PROPERTY, JSON.stringify(active));
+}
+
+function findCashflowUserByEmail_(email) {
+  var wanted = String(email || '').trim().toLowerCase();
+  if (!wanted) return null;
+  var index = readCashflowUserIndex_();
+  for (var i = 0; i < index.length; i += 1) {
+    var user = readCashflowUser_(index[i]);
+    if (user && String(user.email || '').toLowerCase() === wanted) return user;
+  }
+  return null;
+}
+
+/**
+ * Kirim tautan reset ke email terdaftar.
+ * Respons selalu sama (sent: true) agar email mana yang terdaftar tidak
+ * bisa ditebak dari luar.
+ */
+function forgotCashflowPassword(input) {
+  var email = String((input && input.email) || '').trim().toLowerCase();
+  if (!isEmail_(email)) {
+    throw new Error('Masukkan alamat email yang valid.');
+  }
+
+  migrateLegacyCashflowUsers_();
+  var user = findCashflowUserByEmail_(email);
+  if (!user) {
+    return { sent: true };
+  }
+
+  var token = (Utilities.getUuid() + Utilities.getUuid()).replace(/-/g, '');
+  var tokens = readCashflowResetTokens_();
+  tokens[token] = {
+    username: user.username,
+    email: email,
+    expiresAt: Date.now() + CASHFLOW_RESET_TTL_MS
+  };
+  writeCashflowResetTokens_(tokens);
+
+  var link = CASHFLOW_APP_URL + '?reset_token=' + token;
+  var body = [
+    'Halo ' + user.username + ',',
+    '',
+    'Kami menerima permintaan reset password untuk akun CashFlow Anda.',
+    'Buka tautan berikut untuk membuat password baru (berlaku 15 menit):',
+    link,
+    '',
+    'Jika Anda tidak meminta reset, abaikan email ini. Password Anda tidak berubah.'
+  ].join('\n');
+
+  var html = [
+    '<div style="font-family:system-ui,sans-serif;max-width:520px">',
+    '<h2 style="color:#be123c;margin:0 0 12px">Reset Password CashFlow</h2>',
+    '<p>Halo <strong>' + user.username + '</strong>,</p>',
+    '<p>Kami menerima permintaan reset password untuk akun CashFlow Anda. Tautan ini berlaku <strong>15 menit</strong> dan hanya bisa dipakai sekali.</p>',
+    '<p style="margin:24px 0"><a href="' + link + '" style="background:#be123c;color:#fff;padding:12px 20px;border-radius:10px;text-decoration:none;font-weight:700">Buat Password Baru</a></p>',
+    '<p style="font-size:12px;color:#64748b">Jika tombol tidak berfungsi, salin tautan ini:<br>' + link + '</p>',
+    '<p style="font-size:12px;color:#64748b">Abaikan email ini jika Anda tidak meminta reset password.</p>',
+    '</div>'
+  ].join('');
+
+  try {
+    MailApp.sendEmail({ to: email, subject: 'Reset Password CashFlow', body: body, htmlBody: html });
+  } catch (error) {
+    Logger.log('Gagal mengirim email reset: ' + error.message);
+  }
+
+  return { sent: true };
+}
+
+function resetCashflowPassword(input) {
+  var token = String((input && input.token) || '').trim();
+  var newPassword = String((input && input.newPassword) || '');
+
+  if (!token) {
+    throw new Error('Token reset tidak ditemukan.');
+  }
+  if (!newPassword) {
+    throw new Error('Password baru wajib diisi.');
+  }
+
+  cashflowCheckPasswordStrength_(newPassword);
+
+  var tokens = readCashflowResetTokens_();
+  var entry = tokens[token];
+  if (!entry || entry.expiresAt <= Date.now()) {
+    throw new Error('Tautan reset sudah kedaluwarsa. Silakan minta tautan baru.');
+  }
+
+  migrateLegacyCashflowUsers_();
+  var user = readCashflowUser_(entry.username);
+  if (!user) {
+    throw new Error('Akun tidak ditemukan.');
+  }
+
+  var salt = Utilities.getUuid().replace(/-/g, '');
+  user.salt = salt;
+  user.hash = cashflowHashPassword_(newPassword, salt);
+  user.updatedAt = new Date().toISOString();
+  writeCashflowUser_(user);
+
+  delete tokens[token];
+  writeCashflowResetTokens_(tokens);
+
+  // Semua sesi lama dicabut agar password baru berlaku di semua perangkat.
+  var sessions = readCashflowTokens_();
+  Object.keys(sessions).forEach(function (sessionToken) {
+    if (cashflowNormalizeUsername_(sessions[sessionToken].username) === user.username) {
+      delete sessions[sessionToken];
+    }
+  });
+  writeCashflowTokens_(sessions);
+
+  return { reset: true, username: user.username };
+}

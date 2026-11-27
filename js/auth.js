@@ -16,7 +16,7 @@
   // Pendaftaran publik aktif kembali (action register tersedia di Api.gs).
   const REGISTRATION_OPEN = true;
 
-  const state = { mode: 'login', busy: false };
+  const state = { mode: 'login', busy: false, resetToken: '' };
   const listeners = new Set();
   const el = {};
 
@@ -101,6 +101,16 @@
     el.switchBtn = document.getElementById('cf-login-switch-btn');
     el.warn = document.getElementById('cf-login-warn');
     el.app = document.querySelector('.app-container');
+
+    el.forgotPanel = document.getElementById('cf-forgot-panel');
+    el.forgotEmail = document.getElementById('cf-forgot-email');
+    el.forgotMessage = document.getElementById('cf-forgot-message');
+    el.forgotSubmit = document.getElementById('cf-forgot-submit');
+    el.resetPanel = document.getElementById('cf-reset-panel');
+    el.resetPass = document.getElementById('cf-reset-pass');
+    el.resetPass2 = document.getElementById('cf-reset-pass2');
+    el.resetMessage = document.getElementById('cf-reset-message');
+    el.resetSubmit = document.getElementById('cf-reset-submit');
   }
 
   function passwordProblem(value) {
@@ -113,6 +123,7 @@
   }
   function setError(message) {
     if (!el.error) return;
+    el.error.style.color = '';
     el.error.textContent = message || '';
   }
 
@@ -126,7 +137,19 @@
   }
 
   function applyMode(mode) {
-    state.mode = (mode === 'register' && REGISTRATION_OPEN) ? 'register' : 'login';
+    const next = ['register', 'forgot', 'reset'].indexOf(mode) !== -1 ? mode : 'login';
+    state.mode = (next === 'register' && !REGISTRATION_OPEN) ? 'login' : next;
+    const authMode = state.mode === 'login' || state.mode === 'register';
+
+    if (el.form) el.form.hidden = !authMode;
+    if (el.forgotPanel) el.forgotPanel.hidden = state.mode !== 'forgot';
+    if (el.resetPanel) el.resetPanel.hidden = state.mode !== 'reset';
+
+    if (!authMode) {
+      setError('');
+      return;
+    }
+
     if (el.subtitle) {
       el.subtitle.textContent = state.mode === 'register'
         ? 'Buat akun CashFlow untuk menyimpan data di Spreadsheet.'
@@ -259,6 +282,90 @@
     notify('logout');
   }
 
+  function setButtonBusy(button, busy, label) {
+    if (!button) return;
+    button.disabled = busy;
+    button.dataset.busy = busy ? 'true' : 'false';
+    const text = button.querySelector('.cf-login-btn-label');
+    if (text && label) text.textContent = label;
+  }
+
+  async function sendForgotPassword() {
+    const email = String((el.forgotEmail && el.forgotEmail.value) || '').trim();
+    const showMessage = (message, ok) => {
+      if (!el.forgotMessage) return;
+      el.forgotMessage.style.color = ok ? '#059669' : '';
+      el.forgotMessage.textContent = message || '';
+    };
+
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+      showMessage('Masukkan alamat email yang valid.');
+      return;
+    }
+
+    showMessage('');
+    setButtonBusy(el.forgotSubmit, true, 'Mengirim…');
+    try {
+      await window.CashflowApi.get('forgotPassword', { email: email });
+      showMessage('Jika email tersebut terdaftar, tautan reset sudah dikirim. Periksa kotak masuk dan folder spam.', true);
+      if (el.forgotEmail) el.forgotEmail.value = '';
+    } catch (error) {
+      showMessage(error && error.message ? error.message : 'Gagal mengirim tautan reset.');
+    } finally {
+      setButtonBusy(el.forgotSubmit, false, 'Kirim Tautan Reset');
+    }
+  }
+
+  async function sendResetPassword() {
+    const password = String((el.resetPass && el.resetPass.value) || '');
+    const confirm = String((el.resetPass2 && el.resetPass2.value) || '');
+    const showMessage = (message, ok) => {
+      if (!el.resetMessage) return;
+      el.resetMessage.style.color = ok ? '#059669' : '';
+      el.resetMessage.textContent = message || '';
+    };
+
+    if (!state.resetToken) {
+      showMessage('Tautan reset tidak valid. Silakan minta tautan baru.');
+      return;
+    }
+    const problem = passwordProblem(password);
+    if (problem) {
+      showMessage(problem);
+      return;
+    }
+    if (password !== confirm) {
+      showMessage('Konfirmasi password tidak sama.');
+      return;
+    }
+
+    showMessage('');
+    setButtonBusy(el.resetSubmit, true, 'Menyimpan…');
+    try {
+      await window.CashflowApi.get('resetPassword', {
+        token: state.resetToken,
+        newPassword: password
+      });
+
+      state.resetToken = '';
+      try {
+        window.history.replaceState({}, '', window.location.pathname);
+      } catch (error) {
+        /* abaikan */
+      }
+
+      applyMode('login');
+      if (el.error) {
+        el.error.style.color = '#059669';
+        el.error.textContent = 'Password berhasil diperbarui. Silakan masuk dengan password baru.';
+      }
+    } catch (error) {
+      showMessage(error && error.message ? error.message : 'Gagal menyimpan password baru.');
+    } finally {
+      setButtonBusy(el.resetSubmit, false, 'Simpan Password Baru');
+    }
+  }
+
   function bindEvents() {
     if (!el.form) return;
 
@@ -284,6 +391,34 @@
         applyMode(state.mode === 'register' ? 'login' : 'register');
       });
     }
+
+    const forgotLink = document.getElementById('cf-forgot-link');
+    if (forgotLink) {
+      forgotLink.addEventListener('click', function () { applyMode('forgot'); });
+    }
+
+    const forgotBack = document.getElementById('cf-forgot-back');
+    if (forgotBack) {
+      forgotBack.addEventListener('click', function () { applyMode('login'); });
+    }
+
+    if (el.forgotSubmit) {
+      el.forgotSubmit.addEventListener('click', sendForgotPassword);
+    }
+    if (el.forgotEmail) {
+      el.forgotEmail.addEventListener('keydown', function (event) {
+        if (event.key === 'Enter') { event.preventDefault(); sendForgotPassword(); }
+      });
+    }
+    if (el.resetSubmit) {
+      el.resetSubmit.addEventListener('click', sendResetPassword);
+    }
+    [el.resetPass, el.resetPass2].forEach(function (input) {
+      if (!input) return;
+      input.addEventListener('keydown', function (event) {
+        if (event.key === 'Enter') { event.preventDefault(); sendResetPassword(); }
+      });
+    });
 
     const settingsLogout = document.getElementById('cf-settings-logout');
     if (settingsLogout) {
@@ -367,6 +502,23 @@
 
     bindEvents();
     if (el.warn) el.warn.hidden = true;
+
+    const urlResetToken = (function () {
+      try {
+        return new URLSearchParams(window.location.search).get('reset_token') || '';
+      } catch (error) {
+        return '';
+      }
+    })();
+
+    if (urlResetToken) {
+      state.resetToken = urlResetToken;
+      lockApp();
+      applyMode('reset');
+      showOverlay();
+      startWatch();
+      return;
+    }
 
     const session = readSession();
     if (!session) {
