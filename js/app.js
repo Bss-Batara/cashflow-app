@@ -954,83 +954,127 @@ class FinApp {
       return { processed: 0 };
     }
 
+    const txSignature = (row) => [
+      String(row.title || '').trim().toLowerCase(),
+      Math.round(Number(row.amount ?? row.amountMinor) || 0),
+      this.toIsoDate_(row.date ?? row.transactionDate)
+    ].join('|');
+
+    const invSignature = (row) => [
+      String(row.name || '').trim().toLowerCase(),
+      Math.round(Number(row.buyPrice ?? row.buyPriceMinor) || 0),
+      String(row.dateBought || '').slice(0, 10)
+    ].join('|');
+
     this.queueRunning = true;
     this.updateSyncStatus('syncing');
     let processed = 0;
 
-    for (const item of queue) {
-      try {
-        if (item.kind === 'transaction' && item.op === 'create') {
-          // Cek dulu agar pengiriman ulang tidak membuat baris ganda.
-          const existing = await api.get('listTransactions');
-          const duplicate = (existing.items || []).some(tx =>
-            String(tx.title || '') === String(item.data.title || '') &&
-            Number(tx.amountMinor) === Number(item.data.amount) &&
-            this.toIsoDate_(tx.transactionDate) === String(item.data.date || '').slice(0, 10)
-          );
-          if (!duplicate) {
-            const categoryId = await api.resolveCategoryId(item.data.category, item.data.type);
-            await api.post('createTransaction', {
-              type: item.data.type,
-              title: item.data.title,
-              amountMinor: Math.round(Number(item.data.amount) || 0),
-              currency: 'IDR',
-              categoryId: categoryId,
-              transactionDate: item.data.date,
-              wallet: item.data.wallet || '',
-              note: item.data.note || ''
-            });
-          }
-        } else if (item.kind === 'transaction' && item.op === 'void') {
-          const current = await api.get('listTransactions', { includeVoided: 'true' });
-          const row = (current.items || []).find(tx => tx.transactionId === item.data.id);
-          if (row && row.status !== 'void') {
-            await api.post('voidTransaction', {
-              transactionId: item.data.id,
-              expectedVersion: row.version
-            });
-          }
-        } else if (item.kind === 'investment' && item.op === 'create') {
-          const existing = await api.get('listInvestments');
-          const duplicate = (existing.items || []).some(inv =>
-            String(inv.name || '') === String(item.data.name || '') &&
-            Number(inv.buyPriceMinor) === Math.round(Number(item.data.buyPrice) || 0)
-          );
-          if (!duplicate) {
-            await api.post('createInvestment', {
-              name: item.data.name,
-              code: item.data.code,
-              categoryId: 'investment-general',
-              buyPriceMinor: Math.round(Number(item.data.buyPrice) || 0),
-              currentPriceMinor: Math.round(Number(item.data.currentPrice ?? item.data.buyPrice) || 0),
-              units: 1,
-              unitName: 'rupiah',
-              unitMultiplier: 1,
-              dateBought: item.data.dateBought,
-              notes: item.data.notes || ''
-            });
-          }
-        } else if (item.kind === 'investment' && item.op === 'void') {
-          const current = await api.get('listInvestments', { includeVoided: 'true' });
-          const row = (current.items || []).find(inv => inv.investmentId === item.data.id);
-          if (row && row.status !== 'void') {
-            await api.post('voidInvestment', {
-              investmentId: item.data.id,
-              expectedVersion: row.version
-            });
-          }
-        }
+    try {
+      const pendingTx = queue.filter(item => item.kind === 'transaction' && item.op === 'create');
+      const pendingInv = queue.filter(item => item.kind === 'investment' && item.op === 'create');
 
-        // Berhasil (atau sudah ada di server) -> keluarkan dari antrean.
-        store.removeSyncItem(item.id);
-        processed += 1;
-      } catch (error) {
-        console.warn('[CashFlow] Antrean tertahan:', error && error.message);
-        break;
+      // Jumlah yang masih perlu dikirim = (jumlah di antrean) - (jumlah di server).
+      const txSend = new Map();
+      if (pendingTx.length) {
+        const snapshot = await api.get('listTransactions');
+        const serverCounts = new Map();
+        (snapshot.items || []).forEach(row => {
+          const key = txSignature(row);
+          serverCounts.set(key, (serverCounts.get(key) || 0) + 1);
+        });
+        pendingTx.forEach(item => {
+          const key = txSignature(item.data);
+          if (!txSend.has(key)) {
+            txSend.set(key, Math.max(0, pendingTx.filter(other => txSignature(other.data) === key).length - (serverCounts.get(key) || 0)));
+          }
+        });
       }
-    }
 
-    this.queueRunning = false;
+      const invSend = new Map();
+      if (pendingInv.length) {
+        const snapshot = await api.get('listInvestments');
+        const serverCounts = new Map();
+        (snapshot.items || []).forEach(row => {
+          const key = invSignature(row);
+          serverCounts.set(key, (serverCounts.get(key) || 0) + 1);
+        });
+        pendingInv.forEach(item => {
+          const key = invSignature(item.data);
+          if (!invSend.has(key)) {
+            invSend.set(key, Math.max(0, pendingInv.filter(other => invSignature(other.data) === key).length - (serverCounts.get(key) || 0)));
+          }
+        });
+      }
+
+      for (const item of queue) {
+        try {
+          if (item.kind === 'transaction' && item.op === 'create') {
+            const key = txSignature(item.data);
+            const left = txSend.get(key) || 0;
+            if (left > 0) {
+              const categoryId = await api.resolveCategoryId(item.data.category, item.data.type);
+              await api.post('createTransaction', {
+                type: item.data.type,
+                title: item.data.title,
+                amountMinor: Math.round(Number(item.data.amount) || 0),
+                currency: 'IDR',
+                categoryId: categoryId,
+                transactionDate: item.data.date,
+                wallet: item.data.wallet || '',
+                note: item.data.note || ''
+              });
+              txSend.set(key, left - 1);
+            }
+          } else if (item.kind === 'transaction' && item.op === 'void') {
+            const current = await api.get('listTransactions', { includeVoided: 'true' });
+            const row = (current.items || []).find(tx => tx.transactionId === item.data.id);
+            if (row && row.status !== 'void') {
+              await api.post('voidTransaction', {
+                transactionId: item.data.id,
+                expectedVersion: row.version
+              });
+            }
+          } else if (item.kind === 'investment' && item.op === 'create') {
+            const key = invSignature(item.data);
+            const left = invSend.get(key) || 0;
+            if (left > 0) {
+              await api.post('createInvestment', {
+                name: item.data.name,
+                code: item.data.code,
+                categoryId: 'investment-general',
+                buyPriceMinor: Math.round(Number(item.data.buyPrice) || 0),
+                currentPriceMinor: Math.round(Number(item.data.currentPrice ?? item.data.buyPrice) || 0),
+                units: 1,
+                unitName: 'rupiah',
+                unitMultiplier: 1,
+                dateBought: item.data.dateBought,
+                notes: item.data.notes || ''
+              });
+              invSend.set(key, left - 1);
+            }
+          } else if (item.kind === 'investment' && item.op === 'void') {
+            const current = await api.get('listInvestments', { includeVoided: 'true' });
+            const row = (current.items || []).find(inv => inv.investmentId === item.data.id);
+            if (row && row.status !== 'void') {
+              await api.post('voidInvestment', {
+                investmentId: item.data.id,
+                expectedVersion: row.version
+              });
+            }
+          }
+
+          // Hapus dari antrean hanya setelah server memberi acknowledgement sukses.
+          store.removeSyncItem(item.id);
+          processed += 1;
+        } catch (error) {
+          console.warn('[CashFlow] Antrean tertahan:', error && error.message);
+          break;
+        }
+      }
+    } finally {
+      this.queueRunning = false;
+    }
 
     if (processed > 0) {
       try {
@@ -1498,12 +1542,29 @@ class FinApp {
 
     const reader = new FileReader();
     reader.onload = (e) => {
-      const res = window.financeStore.importJSON(e.target.result);
-      if (res.success) {
-        this.showToast('Data berhasil dipulihkan dari backup!');
+      const preflight = window.financeStore.validateBackup(e.target.result);
+      if (!preflight.valid) {
+        alert('File backup tidak valid: ' + preflight.error);
+        return;
+      }
+
+      const summary = preflight.summary;
+      const ok = confirm(
+        'Pulihkan backup ini ke perangkat?\n\n' +
+        'Transaksi: ' + summary.transactions + '\n' +
+        'Investasi: ' + summary.investments + '\n' +
+        'Tanggal export: ' + (summary.exportDate || '-') + '\n\n' +
+        'Data lokal saat ini akan DIGANTI, lalu data baru dijadwalkan sinkron ke Spreadsheet.'
+      );
+      if (!ok) return;
+
+      const result = window.financeStore.restoreBackup(e.target.result);
+      if (result.success) {
+        this.showToast('Backup dipulihkan: ' + result.restored.transactions + ' transaksi, ' + result.restored.investments + ' investasi (' + result.queued + ' diantrekan)');
         this.render();
+        this.processSyncQueue();
       } else {
-        alert('Gagal membaca file backup: ' + res.error);
+        alert('Gagal memulihkan backup: ' + result.error);
       }
     };
     reader.readAsText(file);

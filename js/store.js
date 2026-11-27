@@ -481,31 +481,143 @@ class FinanceStore {
   }
 
   exportJSON() {
+    const transactions = this.getTransactions();
+    const investments = this.getInvestments();
     return JSON.stringify({
-      version: 1,
+      app: 'cashflow',
+      version: 2,
       exportDate: new Date().toISOString(),
+      counts: { transactions: transactions.length, investments: investments.length },
       settings: this.getSettings(),
-      transactions: this.getTransactions(),
-      investments: this.getInvestments()
+      transactions: transactions,
+      investments: investments
     }, null, 2);
   }
 
-  importJSON(jsonString) {
+  validateBackup(jsonString) {
+    let parsed;
     try {
-      const parsed = JSON.parse(jsonString);
-      if (parsed.transactions && Array.isArray(parsed.transactions)) {
-        this.saveTransactions(parsed.transactions);
-      }
-      if (parsed.investments && Array.isArray(parsed.investments)) {
-        this.saveInvestments(parsed.investments);
-      }
-      if (parsed.settings) {
-        this.saveSettings(parsed.settings);
-      }
-      return { success: true };
-    } catch (e) {
-      return { success: false, error: e.message };
+      parsed = JSON.parse(jsonString);
+    } catch (error) {
+      return { valid: false, error: 'JSON tidak dapat dibaca (' + error.message + ')' };
     }
+
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return { valid: false, error: 'Struktur backup tidak dikenali.' };
+    }
+    if (parsed.transactions !== undefined && !Array.isArray(parsed.transactions)) {
+      return { valid: false, error: 'Bagian "transactions" harus berupa array.' };
+    }
+    if (parsed.investments !== undefined && !Array.isArray(parsed.investments)) {
+      return { valid: false, error: 'Bagian "investments" harus berupa array.' };
+    }
+
+    const transactions = parsed.transactions || [];
+    const investments = parsed.investments || [];
+
+    const badTx = transactions.findIndex(tx => {
+      const date = String(tx && tx.date || '');
+      const amount = Number(tx && tx.amount);
+      return !tx || typeof tx !== 'object' ||
+        !/^\d{4}-\d{2}-\d{2}$/.test(date.slice(0, 10)) ||
+        !Number.isFinite(amount) || amount < 0 ||
+        !['income', 'expense'].includes(tx.type) ||
+        typeof tx.title !== 'string' || tx.title.trim() === '';
+    });
+    if (badTx !== -1) {
+      return { valid: false, error: 'Transaksi ke-' + (badTx + 1) + ' tidak valid (tanggal/jenis/judul/nominal).' };
+    }
+
+    const badInv = investments.findIndex(inv => {
+      const price = Number(inv && inv.buyPrice);
+      return !inv || typeof inv !== 'object' ||
+        typeof inv.name !== 'string' || inv.name.trim() === '' ||
+        !Number.isFinite(price) || price < 0;
+    });
+    if (badInv !== -1) {
+      return { valid: false, error: 'Investasi ke-' + (badInv + 1) + ' tidak valid (nama/nilai).' };
+    }
+
+    return {
+      valid: true,
+      parsed: parsed,
+      summary: {
+        transactions: transactions.length,
+        investments: investments.length,
+        exportDate: parsed.exportDate || '',
+        version: parsed.version || 1
+      }
+    };
+  }
+
+  /**
+   * Pulihkan backup: ganti data lokal, lalu masukkan item baru ke antrean
+   * agar ikut tersinkron (tanpa menghapus antrean yang sudah ada).
+   */
+  restoreBackup(jsonString) {
+    const check = this.validateBackup(jsonString);
+    if (!check.valid) return { success: false, error: check.error };
+
+    const parsed = check.parsed;
+    const existingTxIds = new Set(this.getTransactions().map(t => t.id));
+    const existingInvIds = new Set(this.getInvestments().map(i => i.id));
+
+    const transactions = (parsed.transactions || []).map(tx => ({
+      id: String(tx.id || ('tx-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7))),
+      type: tx.type,
+      title: String(tx.title),
+      amount: Number(tx.amount) || 0,
+      category: String(tx.category || 'Lainnya'),
+      date: String(tx.date).slice(0, 10),
+      wallet: String(tx.wallet || ''),
+      note: String(tx.note || '')
+    }));
+
+    const investments = (parsed.investments || []).map(inv => ({
+      id: String(inv.id || ('inv-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7))),
+      name: String(inv.name),
+      code: String(inv.code || ''),
+      category: String(inv.category || 'Lainnya'),
+      buyPrice: Number(inv.buyPrice) || 0,
+      currentPrice: Number(inv.currentPrice ?? inv.buyPrice) || 0,
+      units: 1,
+      unitName: 'rupiah',
+      unitMultiplier: 1,
+      dateBought: String(inv.dateBought || '').slice(0, 10),
+      notes: String(inv.notes || ''),
+      status: 'active'
+    }));
+
+    this.saveTransactions(transactions);
+    this.saveInvestments(investments);
+    if (parsed.settings && typeof parsed.settings === 'object') {
+      this.saveSettings({ ...DEFAULT_SETTINGS, ...parsed.settings });
+    }
+
+    let queued = 0;
+    transactions.forEach(tx => {
+      if (!existingTxIds.has(tx.id)) {
+        this.enqueueSync('transaction', 'create', tx);
+        queued += 1;
+      }
+    });
+    investments.forEach(inv => {
+      if (!existingInvIds.has(inv.id)) {
+        this.enqueueSync('investment', 'create', inv);
+        queued += 1;
+      }
+    });
+
+    return {
+      success: true,
+      queued: queued,
+      restored: { transactions: transactions.length, investments: investments.length }
+    };
+  }
+
+  importJSON(jsonString) {
+    const result = this.restoreBackup(jsonString);
+    return result.success ? { success: true } : { success: false, error: result.error };
   }
 
   exportCSV() {
