@@ -118,8 +118,18 @@ class FinApp {
       if (!window.cashflowAuth || !window.cashflowAuth.isAuthenticated()) return;
       this.syncFromSpreadsheet({ silent: true });
     };
+    window.addEventListener('online', () => {
+      this.updateSyncStatus();
+      this.processSyncQueue();
+    });
+    window.addEventListener('offline', () => this.updateSyncStatus());
+
     window.setInterval(refresh, 30000);
     document.addEventListener('visibilitychange', refresh);
+
+    // Kirim antrean yang tertinggal saat aplikasi dibuka.
+    this.updateSyncStatus();
+    if (navigator.onLine) this.processSyncQueue();
     window.addEventListener('focus', refresh);
 
     // Resize event for charts
@@ -541,12 +551,16 @@ class FinApp {
   async deleteInvestment(id) {
     if (!confirm('Yakin ingin menghapus aset investasi ini dari portofolio?')) return;
 
-    const result = await window.financeStore.deleteInvestment(id);
-    if (result && result.synced === false) {
-      this.showToast('Aset dihapus lokal, gagal sinkron ke Spreadsheet');
-    } else {
-      this.showToast('Aset berhasil dihapus');
+    const current = window.financeStore.getInvestments().find(item => item.id === id);
+    await window.financeStore.deleteInvestment(id);
+
+    if (current && !String(id).startsWith('inv-') && !String(id).startsWith('queue-')) {
+      window.financeStore.enqueueSync('investment', 'void', { id: id, version: current.version });
+      this.updateSyncStatus();
+      await this.processSyncQueue();
     }
+
+    this.showToast(navigator.onLine ? 'Aset berhasil dihapus' : 'Aset dihapus lokal, menunggu sinkron');
   }
 
   // --- Reports View ---
@@ -722,6 +736,117 @@ class FinApp {
     }
   }
 
+  // --- Status & antrean sinkronisasi ---
+  updateSyncStatus(state) {
+    const box = document.getElementById('sync-status');
+    const label = document.getElementById('sync-status-text');
+    if (!box || !label) return;
+
+    const queueCount = window.financeStore.getSyncQueue().length;
+    const syncing = state === 'syncing' || this.syncingQueue === true;
+    const offline = !navigator.onLine;
+
+    box.classList.remove('is-offline', 'is-syncing');
+    if (offline) {
+      box.hidden = false;
+      box.classList.add('is-offline');
+      label.textContent = queueCount > 0
+        ? 'Offline — ' + queueCount + ' data menunggu sinkron'
+        : 'Offline — data tersimpan di perangkat';
+      return;
+    }
+    if (syncing) {
+      box.hidden = false;
+      box.classList.add('is-syncing');
+      label.textContent = 'Menyinkronkan…';
+      return;
+    }
+    if (queueCount > 0) {
+      box.hidden = false;
+      label.textContent = queueCount + ' data menunggu sinkron';
+      return;
+    }
+    box.hidden = true;
+  }
+
+  async processSyncQueue() {
+    const store = window.financeStore;
+    const api = window.CashflowApi;
+
+    if (!api || !api.getToken || !api.getToken()) {
+      this.updateSyncStatus();
+      return { processed: 0 };
+    }
+    if (!navigator.onLine) {
+      this.updateSyncStatus();
+      return { processed: 0, offline: true };
+    }
+    if (this.queueRunning) return { processed: 0, busy: true };
+
+    const queue = store.getSyncQueue();
+    if (!queue.length) {
+      this.updateSyncStatus();
+      return { processed: 0 };
+    }
+
+    this.queueRunning = true;
+    this.updateSyncStatus('syncing');
+    let processed = 0;
+
+    for (const item of queue) {
+      try {
+        if (item.kind === 'transaction' && item.op === 'create') {
+          await store.addRemoteTransaction_(item.data);
+        } else if (item.kind === 'transaction' && item.op === 'void') {
+          await api.post('voidTransaction', {
+            transactionId: item.data.id,
+            expectedVersion: item.data.version
+          });
+        } else if (item.kind === 'investment' && item.op === 'create') {
+          await api.post('createInvestment', {
+            name: item.data.name,
+            code: item.data.code,
+            categoryId: 'investment-general',
+            buyPriceMinor: Math.round(Number(item.data.buyPrice) || 0),
+            currentPriceMinor: Math.round(Number(item.data.currentPrice ?? item.data.buyPrice) || 0),
+            units: 1,
+            unitName: 'rupiah',
+            unitMultiplier: 1,
+            dateBought: item.data.dateBought,
+            notes: item.data.notes || ''
+          });
+          await store.syncInvestmentsFromApi_();
+        } else if (item.kind === 'investment' && item.op === 'void') {
+          await api.post('voidInvestment', {
+            investmentId: item.data.id,
+            expectedVersion: item.data.version
+          });
+          await store.syncInvestmentsFromApi_();
+        }
+
+        store.removeSyncItem(item.id);
+        processed += 1;
+      } catch (error) {
+        console.warn('[CashFlow] Antrean tertahan:', error && error.message);
+        break;
+      }
+    }
+
+    this.queueRunning = false;
+
+    if (processed > 0) {
+      try {
+        await this.syncFromSpreadsheet({ silent: true });
+        await store.syncInvestmentsFromApi_();
+      } catch (error) {
+        /* refresh gagal tidak masalah, data lokal tetap */
+      }
+    }
+
+    this.updateSyncStatus();
+    return { processed: processed };
+  }
+
   /** Bentuk record Spreadsheet (amountMinor, categoryId) -> bentuk localStorage. */
   mapSpreadsheetTransactions_(items, categoryNames) {
     return (items || []).map(tx => ({
@@ -759,10 +884,12 @@ class FinApp {
           .map(category => [category.categoryId, category.displayName || category.name])
       );
 
-      const transactions = this.mapSpreadsheetTransactions_(list && list.items, categoryNames);
-      window.financeStore.saveTransactions(transactions);
+      const fromServer = this.mapSpreadsheetTransactions_(list && list.items, categoryNames);
+      // Data yang masih di antrean tidak boleh terhapus oleh hasil server.
+      const merged = window.financeStore.mergeTransactionsWithQueue_(fromServer);
+      window.financeStore.saveTransactions(merged);
       this.render();
-      return transactions;
+      return merged;
     } catch (error) {
       console.warn('[CashFlow] Sinkronisasi Spreadsheet gagal, memakai data lokal:', error.message);
       if (!options.silent) {
@@ -790,61 +917,37 @@ class FinApp {
       wallet: tx.wallet || 'Utama',
       note: tx.note || ''
     };
+
     window.financeStore.saveTransactions([localTx, ...window.financeStore.getTransactions()]);
+    window.financeStore.enqueueSync('transaction', 'create', localTx);
+    this.updateSyncStatus();
 
-    if (!window.CashflowApi || !window.CashflowApi.enabled() || !window.CashflowApi.getToken()) {
-      return { synced: false, error: new Error('Belum login') };
+    const result = await this.processSyncQueue();
+    const stillPending = window.financeStore.getSyncQueue().some(item =>
+      item.kind === 'transaction' && item.op === 'create' && item.data.id === localTx.id
+    );
+
+    if (stillPending) {
+      return { synced: false, offline: !navigator.onLine, processed: result.processed };
     }
-
-    try {
-      // addRemoteTransaction_ juga menyegarkan localStorage dari Spreadsheet.
-      await window.financeStore.addRemoteTransaction_(tx);
-
-      const found = window.financeStore.getTransactions().some(item =>
-        String(item.title || '') === String(tx.title || '') &&
-        Number(item.amount) === Number(localTx.amount)
-      );
-
-      if (!found) {
-        // Server menolak diam-diam: kembalikan catatan lokal agar tidak hilang.
-        window.financeStore.saveTransactions([localTx, ...window.financeStore.getTransactions()]);
-        return { synced: false, error: new Error('Server tidak menyimpan transaksi') };
-      }
-      return { synced: true };
-    } catch (error) {
-      console.warn('[CashFlow] Transaksi tersimpan lokal, gagal sinkron ke Spreadsheet:', error.message);
-      return { synced: false, error };
-    }
+    return { synced: true, processed: result.processed };
   }
 
   async deleteTransaction(id) {
     if (!confirm('Hapus transaksi ini?')) return;
 
     const current = window.financeStore.getTransactions().find(item => item.id === id);
-    // localStorage dulu supaya tampilan langsung konsisten.
     window.financeStore.saveTransactions(
       window.financeStore.getTransactions().filter(item => item.id !== id)
     );
 
-    const isRemote = Boolean(current) && !String(id).startsWith('tx-') &&
-      window.CashflowApi && window.CashflowApi.enabled();
-
-    if (!isRemote) {
-      this.showToast('Transaksi dihapus');
-      return;
+    if (current && !String(id).startsWith('tx-') && !String(id).startsWith('queue-')) {
+      window.financeStore.enqueueSync('transaction', 'void', { id: id, version: current.version });
+      this.updateSyncStatus();
+      await this.processSyncQueue();
     }
 
-    try {
-      await window.CashflowApi.post('voidTransaction', {
-        transactionId: id,
-        expectedVersion: current.version
-      });
-      await this.syncFromSpreadsheet();
-      this.showToast('Transaksi dihapus');
-    } catch (error) {
-      console.warn('[CashFlow] Dihapus lokal, gagal sinkron ke Spreadsheet:', error.message);
-      this.showToast('Dihapus lokal, gagal sinkron ke Spreadsheet');
-    }
+    this.showToast(navigator.onLine ? 'Transaksi dihapus' : 'Dihapus lokal, menunggu sinkron');
   }
 
   // --- Transaction Modal & Form ---
@@ -1069,9 +1172,6 @@ class FinApp {
   handleSaveInvestment(e) {
     e.preventDefault();
     const category = document.getElementById('invest-input-category')?.value || 'Dana Darurat';
-    // Satu input = satu nilai aset (tanpa lot/unit/gram).
-    const units = 1;
-    const unitName = 'rupiah';
     const buyPrice = parseFloat(document.getElementById('invest-input-buyprice')?.value);
     const dateBought = document.getElementById('invest-input-date')?.value || new Date().toISOString().split('T')[0];
     const notes = document.getElementById('invest-input-notes')?.value.trim() || '';
@@ -1091,34 +1191,43 @@ class FinApp {
     };
 
     const code = defaultCodes[category] || category.substring(0, 4).toUpperCase();
-    const name = notes ? `${category} (${notes})` : `Tabungan ${category}`;
+    const name = notes ? category + ' (' + notes + ')' : 'Tabungan ' + category;
+    const localId = 'inv-' + Date.now();
 
     const investment = {
-      category, name, code, units, unitName,
-      buyPrice, currentPrice: buyPrice, dateBought, notes
+      id: localId,
+      category: category,
+      name: name,
+      code: code,
+      units: 1,
+      unitName: 'rupiah',
+      buyPrice: buyPrice,
+      currentPrice: buyPrice,
+      dateBought: dateBought,
+      notes: notes
     };
 
-    // 1) localStorage lebih dulu agar data tidak hilang bila jaringan gagal.
+    // 1) localStorage dulu (data utama di layar)
     window.financeStore.saveInvestments([
-      { id: 'inv-' + Date.now(), ...investment, status: 'active' },
+      { ...investment, status: 'active' },
       ...window.financeStore.getInvestments()
     ]);
 
+    // 2) masukkan ke antrean sinkronisasi
+    window.financeStore.enqueueSync('investment', 'create', investment);
     this.closeInvestModal();
+    this.updateSyncStatus();
 
-    const hasToken = window.CashflowApi && window.CashflowApi.getToken();
-    if (!hasToken) {
-      this.showToast('Rp Nabung tersimpan lokal (belum sinkron)');
-      return;
-    }
-
-    // 2) Kirim ke Spreadsheet; addInvestment menyegarkan data dari server.
-    window.financeStore.addInvestment(investment)
-      .then(() => this.showToast('Rp Nabung berhasil dicatat!'))
-      .catch(error => {
-        console.warn('[CashFlow] Investasi tersimpan lokal, gagal sinkron:', error.message);
-        this.showToast('Rp Nabung tersimpan lokal, gagal sinkron');
-      });
+    // 3) kirim sekarang bila memungkinkan
+    this.processSyncQueue().then(result => {
+      if (result && result.processed > 0) {
+        this.showToast('Rp Nabung berhasil dicatat!');
+      } else if (!navigator.onLine) {
+        this.showToast('Rp Nabung tersimpan di perangkat, akan dikirim saat online');
+      } else {
+        this.showToast('Rp Nabung tersimpan lokal, menunggu sinkron');
+      }
+    });
   }
 
   // --- Settings & Backup ---

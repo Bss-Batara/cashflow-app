@@ -1273,3 +1273,65 @@ body {
     justify-content: center;
   }
 }
+
+/* --- Indikator status sinkronisasi --- */
+.sync-status {
+  position: fixed;
+  left: 12px;
+  bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+  z-index: 1200;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #9f1239;
+  background: #ffffff;
+  border: 1px solid #fecdd3;
+  border-radius: 9999px;
+  box-shadow: 0 6px 18px rgba(190, 18, 60, 0.18);
+  pointer-events: none;
+}
+
+.sync-status[hidden] { display: none !important; }
+
+.sync-status.is-offline {
+  color: #9a3412;
+  background: #fff7ed;
+  border-color: #fed7aa;
+}
+
+.sync-status.is-syncing {
+  color: #1d4ed8;
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+.sync-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.sync-status.is-syncing .sync-dot {
+  animation: sync-pulse 1s ease-in-out infinite;
+}
+
+@keyframes sync-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(0.7); }
+}
+
+@media (min-width: 768px) {
+  .sync-status {
+    left: auto;
+    right: 16px;
+    bottom: 16px;
+  }
+}
+
+@media print {
+  .sync-status { display: none !important; }
+}

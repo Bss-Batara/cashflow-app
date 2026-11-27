@@ -699,3 +699,21 @@ function resetCashflowPassword(input) {
 
   return { reset: true, username: user.username };
 }
+
+/**
+ * Utilitas admin: jalankan fungsi ini dari editor Apps Script untuk memicu
+ * permintaan izin script.send_mail sekaligus menguji pengiriman email.
+ */
+function kirimTesEmailCashflow() {
+  var tujuan = 'bssbatara@gmail.com';
+  MailApp.sendEmail({
+    to: tujuan,
+    subject: 'Tes Email CashFlow',
+    body: 'Jika Anda menerima email ini, izin kirim email untuk aplikasi CashFlow sudah aktif.'
+  });
+  return {
+    sent: true,
+    to: tujuan,
+    remainingQuota: MailApp.getRemainingDailyQuota()
+  };
+}

@@ -7,7 +7,8 @@ const STORAGE_KEYS = {
   TRANSACTIONS: 'finflow_transactions_v1',
   INVESTMENTS: 'finflow_investments_v1',
   SETTINGS: 'finflow_settings_v1',
-  INVESTMENT_DELETED: 'finflow_investment_deleted_v1'
+  INVESTMENT_DELETED: 'finflow_investment_deleted_v1',
+  SYNC_QUEUE: 'cashflow_sync_queue_v1'
 };
 
 // Initial Mock Data
@@ -72,8 +73,108 @@ class FinanceStore {
       version: tx.version,
       categoryId: tx.categoryId
     }));
-    this.saveTransactions(transactions);
-    return transactions;
+    const merged = this.mergeTransactionsWithQueue_(transactions);
+    this.saveTransactions(merged);
+    return merged;
+  }
+
+  // --- Antrean sinkronisasi (offline-first) ---
+  getSyncQueue() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(STORAGE_KEYS.SYNC_QUEUE) || '[]');
+      return Array.isArray(raw) ? raw : [];
+    } catch (error) {
+      return [];
+    }
+  }
+
+  saveSyncQueue(queue) {
+    localStorage.setItem(STORAGE_KEYS.SYNC_QUEUE, JSON.stringify(queue));
+    this.notifyChange('queue');
+  }
+
+  enqueueSync(kind, op, data) {
+    const queue = this.getSyncQueue();
+    const item = {
+      id: 'q-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7),
+      kind: kind,
+      op: op,
+      data: data,
+      createdAt: new Date().toISOString()
+    };
+    queue.push(item);
+    this.saveSyncQueue(queue);
+    return item;
+  }
+
+  removeSyncItem(id) {
+    this.saveSyncQueue(this.getSyncQueue().filter(item => item.id !== id));
+  }
+
+  pendingQueueCount() {
+    return this.getSyncQueue().length;
+  }
+
+  /** Gabungkan hasil server dengan antrean agar data lokal yang belum terkirim tidak hilang. */
+  mergeTransactionsWithQueue_(serverTransactions) {
+    const queue = this.getSyncQueue();
+    const pendingVoid = new Set(
+      queue.filter(item => item.kind === 'transaction' && item.op === 'void').map(item => item.data.id)
+    );
+    const pendingCreate = queue.filter(item => item.kind === 'transaction' && item.op === 'create');
+
+    const base = (serverTransactions || []).filter(item => !pendingVoid.has(item.id));
+    const signature = new Set(base.map(item =>
+      [item.title, Number(item.amount) || 0, item.date].join('|')
+    ));
+
+    const extras = pendingCreate
+      .filter(item => !signature.has([item.data.title, Number(item.data.amount) || 0, item.data.date].join('|')))
+      .map(item => ({
+        id: item.data.id || ('queue-' + item.id),
+        type: item.data.type,
+        title: item.data.title,
+        amount: Number(item.data.amount) || 0,
+        category: item.data.category,
+        date: item.data.date,
+        wallet: item.data.wallet,
+        note: item.data.note,
+        pending: true
+      }));
+
+    return [...extras, ...base];
+  }
+
+  mergeInvestmentsWithQueue_(serverInvestments) {
+    const queue = this.getSyncQueue();
+    const pendingVoid = new Set(
+      queue.filter(item => item.kind === 'investment' && item.op === 'void').map(item => item.data.id)
+    );
+    const pendingCreate = queue.filter(item => item.kind === 'investment' && item.op === 'create');
+
+    const base = (serverInvestments || []).filter(item => !pendingVoid.has(item.id));
+    const signature = new Set(base.map(item =>
+      [item.name, Number(item.buyPrice) || 0, item.dateBought].join('|')
+    ));
+
+    const extras = pendingCreate
+      .filter(item => !signature.has([item.data.name, Number(item.data.buyPrice) || 0, item.data.dateBought].join('|')))
+      .map(item => ({
+        id: item.data.id || ('queue-' + item.id),
+        name: item.data.name,
+        code: item.data.code,
+        category: item.data.category,
+        buyPrice: Number(item.data.buyPrice) || 0,
+        currentPrice: Number(item.data.currentPrice ?? item.data.buyPrice) || 0,
+        units: 1,
+        unitName: 'rupiah',
+        unitMultiplier: 1,
+        dateBought: item.data.dateBought,
+        notes: item.data.notes || '',
+        pending: true
+      }));
+
+    return [...extras, ...base];
   }
 
   // --- Transactions ---
@@ -230,29 +331,8 @@ class FinanceStore {
    */
   async deleteInvestment(id) {
     const investments = this.getInvestments();
-    const target = investments.find(item => item.id === id);
     this.saveInvestments(investments.filter(item => item.id !== id));
-
-    if (!target) return { deleted: true, synced: true };
-
-    const hasToken = window.CashflowApi && window.CashflowApi.getToken && window.CashflowApi.getToken();
-    const isRemote = hasToken && !String(id).startsWith('inv-');
-    if (!isRemote) return { deleted: true, synced: true };
-
-    this.markInvestmentDeleted(id);
-
-    try {
-      await window.CashflowApi.post('voidInvestment', {
-        investmentId: id,
-        expectedVersion: target.version
-      });
-      this.unmarkInvestmentDeleted(id);
-      await this.syncInvestmentsFromApi_();
-      return { deleted: true, synced: true };
-    } catch (error) {
-      console.warn('[CashFlow] Aset dihapus lokal, gagal sinkron:', error.message);
-      return { deleted: true, synced: false, error };
-    }
+    return { deleted: true };
   }
 
   // --- Settings ---
@@ -477,27 +557,28 @@ window.financeStore = new FinanceStore();
     const investments = response.items
       .filter(item => !deletedIds.has(item.investmentId))
       .map(item => {
-      const name = String(item.name || '');
-      const category = name.startsWith('Tabungan ') ? name.substring(9) : (item.categoryId || 'Lainnya');
-      return {
-        id: item.investmentId,
-        name: name,
-        code: item.code,
-        category: category,
-        buyPrice: Number(item.buyPriceMinor) || 0,
-        currentPrice: Number(item.currentPriceMinor) || 0,
-        units: Number(item.units) || 1,
-        unitName: item.unitName || 'unit',
-        unitMultiplier: Number(item.unitMultiplier) || 1,
-        dateBought: item.dateBought,
-        notes: item.notes || '',
-        version: item.version,
-        status: item.status
-      };
-    });
-    this.saveInvestments(investments);
-    return investments;
-  };
+        const name = String(item.name || '');
+        const category = name.startsWith('Tabungan ') ? name.substring(9) : (item.categoryId || 'Lainnya');
+        return {
+          id: item.investmentId,
+          name: name,
+          code: item.code,
+          category: category,
+          buyPrice: Number(item.buyPriceMinor) || 0,
+          currentPrice: Number(item.currentPriceMinor) || 0,
+          units: Number(item.units) || 1,
+          unitName: item.unitName || 'unit',
+          unitMultiplier: Number(item.unitMultiplier) || 1,
+          dateBought: item.dateBought,
+          notes: item.notes || '',
+          version: item.version,
+          status: item.status
+        };
+      });
+    const merged = this.mergeInvestmentsWithQueue_(investments);
+    this.saveInvestments(merged);
+    return merged;
+  };;
 
   FinanceStore.prototype.addInvestment = function (inv) {
     if (window.CashflowApi?.enabled()) {
