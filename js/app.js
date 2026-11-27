@@ -796,34 +796,67 @@ class FinApp {
     for (const item of queue) {
       try {
         if (item.kind === 'transaction' && item.op === 'create') {
-          await store.addRemoteTransaction_(item.data);
+          // Cek dulu agar pengiriman ulang tidak membuat baris ganda.
+          const existing = await api.get('listTransactions');
+          const duplicate = (existing.items || []).some(tx =>
+            String(tx.title || '') === String(item.data.title || '') &&
+            Number(tx.amountMinor) === Number(item.data.amount) &&
+            String(tx.transactionDate || '').slice(0, 10) === String(item.data.date || '').slice(0, 10)
+          );
+          if (!duplicate) {
+            const categoryId = await api.resolveCategoryId(item.data.category, item.data.type);
+            await api.post('createTransaction', {
+              type: item.data.type,
+              title: item.data.title,
+              amountMinor: Math.round(Number(item.data.amount) || 0),
+              currency: 'IDR',
+              categoryId: categoryId,
+              transactionDate: item.data.date,
+              wallet: item.data.wallet || '',
+              note: item.data.note || ''
+            });
+          }
         } else if (item.kind === 'transaction' && item.op === 'void') {
-          await api.post('voidTransaction', {
-            transactionId: item.data.id,
-            expectedVersion: item.data.version
-          });
+          const current = await api.get('listTransactions', { includeVoided: 'true' });
+          const row = (current.items || []).find(tx => tx.transactionId === item.data.id);
+          if (row && row.status !== 'void') {
+            await api.post('voidTransaction', {
+              transactionId: item.data.id,
+              expectedVersion: row.version
+            });
+          }
         } else if (item.kind === 'investment' && item.op === 'create') {
-          await api.post('createInvestment', {
-            name: item.data.name,
-            code: item.data.code,
-            categoryId: 'investment-general',
-            buyPriceMinor: Math.round(Number(item.data.buyPrice) || 0),
-            currentPriceMinor: Math.round(Number(item.data.currentPrice ?? item.data.buyPrice) || 0),
-            units: 1,
-            unitName: 'rupiah',
-            unitMultiplier: 1,
-            dateBought: item.data.dateBought,
-            notes: item.data.notes || ''
-          });
-          await store.syncInvestmentsFromApi_();
+          const existing = await api.get('listInvestments');
+          const duplicate = (existing.items || []).some(inv =>
+            String(inv.name || '') === String(item.data.name || '') &&
+            Number(inv.buyPriceMinor) === Math.round(Number(item.data.buyPrice) || 0)
+          );
+          if (!duplicate) {
+            await api.post('createInvestment', {
+              name: item.data.name,
+              code: item.data.code,
+              categoryId: 'investment-general',
+              buyPriceMinor: Math.round(Number(item.data.buyPrice) || 0),
+              currentPriceMinor: Math.round(Number(item.data.currentPrice ?? item.data.buyPrice) || 0),
+              units: 1,
+              unitName: 'rupiah',
+              unitMultiplier: 1,
+              dateBought: item.data.dateBought,
+              notes: item.data.notes || ''
+            });
+          }
         } else if (item.kind === 'investment' && item.op === 'void') {
-          await api.post('voidInvestment', {
-            investmentId: item.data.id,
-            expectedVersion: item.data.version
-          });
-          await store.syncInvestmentsFromApi_();
+          const current = await api.get('listInvestments', { includeVoided: 'true' });
+          const row = (current.items || []).find(inv => inv.investmentId === item.data.id);
+          if (row && row.status !== 'void') {
+            await api.post('voidInvestment', {
+              investmentId: item.data.id,
+              expectedVersion: row.version
+            });
+          }
         }
 
+        // Berhasil (atau sudah ada di server) -> keluarkan dari antrean.
         store.removeSyncItem(item.id);
         processed += 1;
       } catch (error) {
