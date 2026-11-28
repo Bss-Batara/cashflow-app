@@ -186,3 +186,33 @@ menghapus data browser kecuali sudah dipastikan tersinkron.
 **Rollback:** `git revert 9bf6137 && git push` (atau pulihkan berkas dari `_backup/deploy-20261128-194724/frontend-live-sebelum-deploy/`). Tanpa perubahan backend/database.
 
 **Catatan:** pada aplikasi ini tidak ada kartu berteks "Tingkatkan skill, tambah pemasukan" (item 2.6) — yang ada adalah kartu Ringkasan dengan teks serupa yang sudah diperbarui ke "Tingkatkan Skill dan Tambah Pemasukan"; tidak ada dummy data yang dibuat.
+
+---
+
+## Rilis 2026-11-29a — Batch 6 (13 temuan)
+
+| Item | Nilai |
+|---|---|
+| Frontend commit | **7128410** (production) |
+| URL produksi | https://bss-batara.github.io/cashflow-app/ |
+| Backend | tidak berubah |
+
+**Perbaikan & revisi:**
+- **XLSX nominal Tabungan (A)**: akar masalah — objek investasi mentah tidak memuat `currentValue`; nilai dihitung `unit × unitMultiplier × currentPrice` (sama seperti `store.getPortfolioMetrics()`). Ekspor kini memakai rumus itu → nominal tabungan benar (bukan 0) dan tetap sesuai rentang.
+- **Grafik Histori Tabungan (F)**: akar masalah — `renderSavingsHistory()` hanya didefinisikan, **tidak pernah dipanggil**. Kini dipanggil dari `render()`; render ke kanvas Tabungan **dan** Pemasukan; empty state jelas; teks helper dihapus.
+- **Ringkasan (B)**: kartu Arus Kas Bersih → `! Besar Pasak Daripada Tiang` (penulis JS dihentikan); semua teks rentang berulang pada kartu dihapus.
+- **Date Range (C/H)**: kalender grid, nama hari, dan navigasi bulan dihapus; From/To + label rata tengah; modal ringkas 340px; Reset/Close/Confirm & filter tetap.
+- **Ikon (D)**: Arus Kas Bersih → ikon uang cash; TOTAL TABUNGAN → ikon celengan.
+- **Pemasukan (E)**: aksen hijau; "Daftar Sumber Pemasukan" tetap; ditambah grafik Histori Menabung (data nyata).
+- **Diversifikasi (G)**: `Tersebar di Berbagai Instrumen (Saham, Emas, Reksadana dll).`
+- **Total Kekayaan Bersih (I)**: warna mengikuti nilai (≤ 0 merah, > 0 hijau); rumus tidak diubah.
+- **Reload server (J)**: `Ambil Ulang Data Terbaru dari Server.` + indikator dot berwarna (style sama dengan dot di samping Rp Keluar).
+
+**Bukti:**
+- Verifikasi browser **23/23 lulus** (termasuk pemeriksaan piksel kanvas: grafik benar-benar tergambar; modal tanpa kalender; ikon; teks; warna net worth; dot reload).
+- XLSX (openpyxl): **4 baris** = Pengeluaran + Pemasukan + **2 Tabungan**; nominal tabungan **1.200.000 & 800.000** (non-nol); total 9.050.000; semua numerik; sesuai rentang.
+- Regression: unit **15/15**, client-ref **11/11**, e2e-smoke **8/8**, e2e-edit **9/9**; struktur HTML seimbang (div 201/201, section 7/7).
+- Produksi live: semua penanda Batch 6 ADA / terhapus sesuai revisi; `js/app.js` memuat `savingValue_` & `renderSavingsHistory()`; `js/export-xlsx.js` memuat `savingValue`; token `?v=20261129a`.
+- CI: *Validate CashFlow* **success**; *pages build and deployment* **success**.
+
+**Rollback:** `git revert 7128410 && git push`. Tanpa perubahan backend/database.
