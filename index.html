@@ -7,10 +7,10 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="CashFlow">
-  <title>CashFlow - Catat Keuangan & Portofolio Investasi</title>
+  <title>CashFlow - Catat Keuangan &amp; Tabungan</title>
   
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="css/style.css?v=20261128e">
+  <link rel="stylesheet" href="css/style.css?v=20261128f">
   <link rel="stylesheet" href="css/login.css?v=20261128c">
 </head>
 <body>
@@ -161,15 +161,15 @@
         </li>
         <li class="nav-item" data-view="expenses">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
-          <span>Pengeluaran Harian</span>
+          <span>Pengeluaran</span>
         </li>
         <li class="nav-item" data-view="income">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
-          <span>Arus Kas & Income</span>
+          <span>Pemasukan</span>
         </li>
         <li class="nav-item" data-view="portfolio">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-          <span>Portofolio Investasi</span>
+          <span>Tabungan</span>
         </li>
         <li class="nav-item" data-view="reports">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
@@ -220,7 +220,7 @@
       <header class="desktop-header">
         <div>
           <h1 id="desktop-page-title" class="text-2xl font-bold">Ringkasan Keuangan</h1>
-          <p id="desktop-page-desc" class="text-sm text-secondary">Pantau cash flow, pengeluaran harian, dan pertumbuhan portofolio investasi</p>
+          <p id="desktop-page-desc" class="text-sm text-secondary">Pantau Cash Flow, Pengeluaran Harian, dan Pertumbuhan Tabungan</p>
         </div>
         <div class="header-actions">
           <span class="sync-status" data-sync-dot role="status" aria-label="Status sinkronisasi" title="Status sinkronisasi"></span>
@@ -255,13 +255,10 @@
         </div>
 
         <!-- Top Metrics Cards -->
-        <!-- Filter Bulan & Tahun -->
-        <div class="dash-period">
-          <label class="dash-period-label" for="dash-month-select">Bulan</label>
-          <select id="dash-month-select" class="form-control dash-period-select" aria-label="Pilih bulan"></select>
-          <label class="dash-period-label" for="dash-year-select">Tahun</label>
-          <select id="dash-year-select" class="form-control dash-period-select" aria-label="Pilih tahun"></select>
-        </div>
+        <button type="button" id="dash-range-open" class="btn btn-secondary btn-sm" aria-haspopup="dialog" aria-controls="range-modal">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <span>Rentang Data</span>
+        </button>
 
         <!-- Top Metrics Cards -->
         <div class="grid-4" style="margin-bottom: 20px;">
@@ -281,7 +278,7 @@
               <div class="metric-icon-wrap">↑</div>
             </div>
             <div id="dash-total-expense" class="metric-value text-expense">Rp 0</div>
-            <div class="metric-sub">Kebutuhan harian &amp; tagihan</div>
+            <div class="metric-sub">Bedakan Kebutuhan dan Keinginan</div>
             <div class="metric-month" id="dash-month-expense">(—)</div>
           </div>
 
@@ -291,17 +288,17 @@
               <div class="metric-icon-wrap">↓</div>
             </div>
             <div id="dash-total-income" class="metric-value text-income">Rp 0</div>
-            <div class="metric-sub">Bulan ini &amp; pemasukan aktif</div>
+            <div class="metric-sub">Tingkatkan Skill dan Tambah Pemasukan</div>
             <div class="metric-month" id="dash-month-income">(—)</div>
           </div>
 
           <div class="metric-card portfolio">
             <div class="metric-top">
-              <span class="metric-label">Portofolio Investasi</span>
-              <div class="metric-icon-wrap">📈</div>
+              <span class="metric-label">TOTAL TABUNGAN</span>
+              <div class="metric-icon-wrap"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19h16"/><path d="M6 19c0-4 2.7-7 6-7s6 3 6 7"/><path d="M12 12V6a2 2 0 0 1 4 0"/><circle cx="12" cy="4" r="1"/></svg></div>
             </div>
             <div id="dash-portfolio-val" class="metric-value" style="color: var(--accent-gold);">Rp 0</div>
-            <div id="dash-portfolio-gain" class="metric-sub">Return: Rp 0 (+0%)</div>
+            <div id="dash-portfolio-gain" class="metric-sub">Tingkatkan Terus Tabungan</div>
             <div class="metric-month" id="dash-month-portfolio">(—)</div>
           </div>
         </div>
@@ -478,44 +475,27 @@
         </div>
       </section>
 
-      <!-- VIEW 4: PORTOFOLIO INVESTASI -->
+      <!-- VIEW 4: TABUNGAN -->
       <section id="view-portfolio" class="view-panel">
-        <div class="grid-4" style="margin-bottom: 20px;">
-          <div class="metric-card portfolio">
-            <div class="metric-top">
-              <span class="metric-label">Total Nilai Sekarang</span>
-              <div class="metric-icon-wrap">📈</div>
-            </div>
-            <div id="port-total-value" class="metric-value" style="color: var(--accent-gold);">Rp 0</div>
-            <div class="metric-sub">Berdasarkan harga pasar terkini</div>
+        <div class="metric-card portfolio" style="margin-bottom: 20px;">
+          <div class="metric-top">
+            <span class="metric-label">Total Tabungan Sekarang</span>
+            <div class="metric-icon-wrap"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19h16"/><path d="M6 19c0-4 2.7-7 6-7s6 3 6 7"/><path d="M12 12V6a2 2 0 0 1 4 0"/><circle cx="12" cy="4" r="1"/></svg></div>
           </div>
+          <div id="port-total-value" class="metric-value" style="color: var(--accent-gold);">Rp 0</div>
+          <div class="metric-sub">Total nominal tabungan Anda</div>
+        </div>
 
-          <div class="metric-card netflow">
-            <div class="metric-top">
-              <span class="metric-label">Modal Diinvestasikan</span>
-              <div class="metric-icon-wrap">💼</div>
+        <div class="card" style="margin-bottom: 20px;">
+          <div class="card-header">
+            <div class="card-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><polyline points="7 14 11 10 14 13 19 7"/></svg>
+              <span>Histori Tabungan</span>
             </div>
-            <div id="port-total-capital" class="metric-value">Rp 0</div>
-            <div class="metric-sub">Total biaya modal pembelian</div>
           </div>
-
-          <div class="metric-card income">
-            <div class="metric-top">
-              <span class="metric-label">Keuntungan (Unrealized)</span>
-              <div class="metric-icon-wrap">🚀</div>
-            </div>
-            <div id="port-total-profit" class="metric-value text-income">Rp 0</div>
-            <div id="port-profit-percent" class="metric-sub">+0.00%</div>
-          </div>
-
-          <div class="metric-card" style="border-left: 4px solid var(--accent-purple);">
-            <div class="metric-top">
-              <span class="metric-label">Aset Terbesar</span>
-              <div class="metric-icon-wrap" style="background: rgba(168, 85, 247, 0.15); color: var(--accent-purple);">⭐</div>
-            </div>
-            <div id="port-top-asset" class="metric-value text-base font-semibold" style="margin-top: 4px;">-</div>
-            <div id="port-top-val" class="metric-sub">-</div>
-          </div>
+          <canvas id="savings-history-chart" style="width: 100%; height: 220px;"></canvas>
+          <p id="savings-history-empty" class="empty" hidden>Belum ada histori tabungan. Tambahkan tabungan untuk melihat perkembangannya.</p>
+          <p class="text-xs text-muted" style="margin-top: 8px;">Histori dihitung dari akumulasi nominal tabungan per tanggal transaksi (sesuai Rentang Data aktif).</p>
         </div>
 
         <!-- Portfolio Actions & Categories -->
@@ -545,11 +525,7 @@
                 <tr>
                   <th>Aset / Kode</th>
                   <th>Kategori</th>
-                  <th>Jumlah Unit</th>
-                  <th>Harga Beli</th>
-                  <th>Harga Terkini</th>
-                  <th>Nilai Pasar</th>
-                  <th>Untung / Rugi</th>
+                  <th>Nominal Date</th>
                   <th style="text-align: right;">Aksi</th>
                 </tr>
               </thead>
@@ -616,7 +592,7 @@
           <div class="card-header">
             <div class="card-title">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-              <span>Batas Anggaran (Budget Limit)</span>
+              <span>Batas Anggaran</span>
             </div>
           </div>
           <div class="form-group">
@@ -639,8 +615,8 @@
             </div>
           </div>
           <p class="text-sm text-secondary" style="margin-bottom: 16px;">
-            Pilih rentang data lalu ekspor ke Excel. Jika tidak ada filter yang dipilih,
-            yang diekspor adalah <strong>bulan berjalan</strong>.
+            Pilih Rentang Data lalu Ekspor ke <strong>Excel</strong>.<br>
+            Jika tidak ada filter yang dipilih, yang diekspor adalah <strong>Bulan Berjalan</strong>.
           </p>
 
           <!-- Rentang Data: kalender hanya terbuka saat tombol diklik -->
@@ -649,7 +625,6 @@
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
               <span>Rentang Data</span>
             </button>
-            <span class="export-range-value" id="range-label">&mdash;</span>
           </div>
 
           <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px;">
@@ -871,7 +846,7 @@
         <!-- 3. Harga Beli (Ukuran & warna disamakan dengan kolom lain) -->
         <div class="form-group">
           <label id="invest-label-buyprice" class="form-label">Harga Beli *</label>
-          <input type="number" id="invest-input-buyprice" class="form-control" placeholder="Contoh: 1000000" required oninput="app.updateInvestAmountPreview(this.value)">
+          <input type="text" inputmode="numeric" autocomplete="off" id="invest-input-buyprice" class="form-control" placeholder="Contoh: 1000000" required oninput="app.updateInvestAmountPreview(this.value)">
           <div id="invest-buyprice-preview" class="text-xs font-semibold text-primary" style="margin-top: 6px; display: none;"></div>
           <div id="invest-capital-preview" class="text-xs font-semibold" style="margin-top: 4px; color: var(--text-secondary); display: none;"></div>
           <div class="quick-amount-chips" style="margin-top: 8px;">
@@ -908,13 +883,13 @@
   <div id="toast-container" class="toast-container"></div>
 
   <!-- SCRIPTS -->
-  <script src="js/api.js?v=20261128e"></script>
-  <script src="js/store.js?v=20261128e"></script>
+  <script src="js/api.js?v=20261128f"></script>
+  <script src="js/store.js?v=20261128f"></script>
   <script src="js/charts.js?v=20261128c"></script>
-  <script src="js/auth.js?v=20261128e"></script>
-  <script src="js/date-range.js?v=20261128e"></script>
-  <script src="js/export-xlsx.js?v=20261128e"></script>
-  <script src="js/app.js?v=20261128e"></script>
+  <script src="js/auth.js?v=20261128f"></script>
+  <script src="js/date-range.js?v=20261128f"></script>
+  <script src="js/export-xlsx.js?v=20261128f"></script>
+  <script src="js/app.js?v=20261128f"></script>
 
   <!-- SERVICE WORKER (PWA installable) -->
   <script>

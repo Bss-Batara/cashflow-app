@@ -219,6 +219,14 @@ class FinApp {
         this.navigateTo(view);
       });
     });
+
+    // Tombol Rentang Data pada Ringkasan membuka modal kalender yang sama
+    // (default: tanggal 1 bulan berjalan → hari ini).
+    document.getElementById('dash-range-open')?.addEventListener('click', () => {
+      if (globalThis.cashflowDateRange && typeof globalThis.cashflowDateRange.__open === 'function') {
+        globalThis.cashflowDateRange.__open();
+      }
+    });
   }
 
   navigateTo(viewName) {
@@ -243,12 +251,12 @@ class FinApp {
 
     // Update Header Titles
     const titles = {
-      dashboard: { title: 'Ringkasan Keuangan', desc: 'Pantau cash flow, pengeluaran harian, dan pertumbuhan portofolio investasi' },
-      expenses: { title: 'Pengeluaran Harian', desc: 'Pantau dan kendalikan pengeluaran harian Anda agar tidak boros' },
-      income: { title: 'Arus Kas & Income', desc: 'Lacak sumber pendapatan, cash inflow, dan tingkat tabungan (savings rate)' },
-      portfolio: { title: 'Portofolio Investasi', desc: 'Kawal pertumbuhan aset saham, reksadana, emas, kripto, dan obligasi' },
+      dashboard: { title: 'Ringkasan Keuangan', desc: 'Pantau Cash Flow, Pengeluaran Harian, dan Pertumbuhan Tabungan' },
+      expenses: { title: 'Pengeluaran', desc: 'Jaga Pengeluaran dan Capai Target Tabungan' },
+      income: { title: 'Pemasukan', desc: 'Tingkatkan Pendapatan dan Bangun Impian' },
+      portfolio: { title: 'Tabungan', desc: 'Langkah Kecil Menabung dan Hasil Besar di Masa Depan' },
       reports: { title: 'Analisis & Laporan', desc: 'Evaluasi kebiasaan finansial dan diversifikasi kekayaan Anda' },
-      settings: { title: 'Pengaturan & Ekspor Data', desc: 'Kelola batas anggaran belanja harian, ekspor ke Excel, dan ganti kata sandi' }
+      settings: { title: 'Pengaturan & Ekspor Data', desc: 'Kelola Batas Anggaran Belanja Harian, Ekspor ke Excel, dan Ganti Kata Sandi' }
     };
 
     if (titles[viewName]) {
@@ -339,10 +347,13 @@ class FinApp {
     // Label bulan tanpa tanda kurung (revisi BOS: "(November)" -> "November").
     const label = names[this.dashMonth] || '';
 
+    const rangeLabel = (globalThis.cashflowDateRange && typeof globalThis.cashflowDateRange.label === 'function')
+      ? globalThis.cashflowDateRange.label()
+      : label;
     ['dash-month-income', 'dash-month-expense', 'dash-month-net', 'dash-month-portfolio']
       .forEach(id => {
         const node = document.getElementById(id);
-        if (node) node.textContent = label;
+        if (node) node.textContent = rangeLabel;
       });
   }
 
@@ -351,9 +362,9 @@ class FinApp {
   }
 
   getDashboardTransactions() {
-    const key = this.dashboardPeriodKey();
+    const key = this.dashboardPeriodKey(); // masih dipakai untuk label periode
     return window.financeStore.getTransactions()
-      .filter(tx => this.toIsoDate_(tx.date).slice(0, 7) === key);
+      .filter(tx => this.inActiveRange_(this.toIsoDate_(tx.date)));
   }
 
   computeDashboardMetrics() {
@@ -446,9 +457,9 @@ class FinApp {
     }
     if (portValEl) portValEl.textContent = window.formatIDR(port.totalCurrentValue);
     if (portGainEl) {
-      const isPos = port.totalProfitLoss >= 0;
-      portGainEl.textContent = 'Return: ' + window.formatIDR(port.totalProfitLoss) + ' (' + window.formatPercent(port.totalProfitLossPercent) + ')';
-      portGainEl.style.color = isPos ? 'var(--income-color)' : 'var(--expense-color)';
+      // Revisi BOS: kartu tabungan menampilkan pesan tetap, bukan return investasi.
+      portGainEl.textContent = 'Tingkatkan Terus Tabungan';
+      portGainEl.style.color = '';
     }
 
     // Daily gauge status
@@ -607,6 +618,40 @@ class FinApp {
   }
 
   // --- Portfolio View ---
+  /** Grafik histori tabungan (akumulasi nominal per tanggal transaksi, data nyata). */
+  renderSavingsHistory() {
+    const canvas = document.getElementById('savings-history-chart');
+    const empty = document.getElementById('savings-history-empty');
+    if (!canvas) return;
+
+    const store = window.financeStore;
+    const list = (store && typeof store.getInvestments === 'function' ? store.getInvestments() : []) || [];
+    const range = globalThis.cashflowDateRange;
+    const rows = list
+      .map(inv => ({ date: String(inv.dateBought || '').slice(0, 10), value: Number(inv.currentValue) || 0 }))
+      .filter(row => row.date && (!range || typeof range.matches !== 'function' || range.matches(row.date)));
+
+    if (rows.length === 0) {
+      if (empty) empty.hidden = false;
+      canvas.style.display = 'none';
+      if (window.FinCharts) window.FinCharts.renderCashFlowChart('savings-history-chart', []);
+      return;
+    }
+
+    const perDate = new Map();
+    rows.forEach(row => perDate.set(row.date, (perDate.get(row.date) || 0) + row.value));
+    const dates = [...perDate.keys()].sort();
+    let running = 0;
+    const series = dates.map(date => {
+      running += perDate.get(date);
+      return { label: date.slice(5), income: running, expense: 0 };
+    });
+
+    if (empty) empty.hidden = true;
+    canvas.style.display = '';
+    if (window.FinCharts) window.FinCharts.renderCashFlowChart('savings-history-chart', series);
+  }
+
   renderPortfolio() {
     const port = window.financeStore.getPortfolioMetrics();
 
@@ -648,10 +693,10 @@ class FinApp {
     const tbody = document.getElementById('portfolio-table-body');
     if (tbody) {
       if (items.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 30px;">Tidak ada aset dalam kategori ini.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 30px;">Tidak ada aset dalam kategori ini.</td></tr>';
       } else {
         tbody.innerHTML = items.map(inv => {
-          const isPos = inv.profitLoss >= 0;
+          const savingDate = String(inv.dateBought || '').slice(0, 10);
           return `
             <tr>
               <td>
@@ -663,27 +708,13 @@ class FinApp {
                   ${inv.category}
                 </span>
               </td>
-              <td>${inv.category === 'Dana Darurat' ? '-' : escapeHtml(inv.units + ' ' + inv.unitName)}</td>
-              <td>${window.formatIDR(inv.buyPrice)}</td>
               <td>
-                <span class="font-semibold">${window.formatIDR(inv.currentPrice)}</span>
-              </td>
-              <td class="font-bold">${window.formatIDR(inv.currentValue)}</td>
-              <td>
-                <div class="font-semibold" style="color: ${isPos ? 'var(--income-color)' : 'var(--expense-color)'}">
-                  ${window.formatIDR(inv.profitLoss)}
-                </div>
-                <div class="text-xs" style="color: ${isPos ? 'var(--income-color)' : 'var(--expense-color)'}">
-                  ${window.formatPercent(inv.profitLossPercent)}
-                </div>
+                <div class="font-bold">${window.formatIDR(inv.currentValue)}</div>
+                <div class="text-xs text-muted">${savingDate || '-'}</div>
               </td>
               <td style="text-align: right;">
-                <button class="btn btn-secondary btn-sm" onclick="app.quickEditPrice('${escapeHtml(inv.id)}', ${Number(inv.currentPrice) || 0})" title="Update Harga Pasar">
-                  ✏️ Update
-                </button>
-                <button class="btn btn-secondary btn-sm" style="color: var(--expense-color); margin-left: 4px;" onclick="app.deleteInvestment('${escapeHtml(inv.id)}')" title="Hapus Aset">
-                  🗑️
-                </button>
+                <button class="btn btn-secondary btn-sm" onclick="app.quickEditPrice('${escapeHtml(inv.id)}', ${Number(inv.currentPrice) || 0})" title="Update nominal tabungan">✏️</button>
+                <button class="btn btn-secondary btn-sm" style="color: var(--expense-color); margin-left: 4px;" onclick="app.deleteInvestment('${escapeHtml(inv.id)}')" title="Hapus tabungan">🗑️</button>
               </td>
             </tr>
           `;

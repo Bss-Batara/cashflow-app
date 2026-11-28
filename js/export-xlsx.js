@@ -283,6 +283,24 @@
 
     const filters = options.filters || readFilters();
     const transactions = store.getTransactions() || [];
+    /**
+     * Tabungan (investasi) IKUT diekspor: dipetakan ke bentuk transaksi dengan
+     * Tipe 'Tabungan' sehingga masuk ke workbook yang sama tanpa duplikasi.
+     * Nominal memakai nilai tabungan saat ini, tanggal memakai tanggal transaksi.
+     */
+    const savings = (typeof store.getInvestments === 'function' ? store.getInvestments() : []) || [];
+    savings.forEach(inv => {
+      transactions.push({
+        id: inv.id || '',
+        type: 'saving',
+        title: inv.name || inv.category || 'Tabungan',
+        amount: Number(inv.currentValue) || 0,
+        category: inv.category || 'Tabungan',
+        date: String(inv.dateBought || '').slice(0, 10),
+        wallet: '',
+        note: inv.notes || ''
+      });
+    });
     const { mode, rows, filenameSuffix } = filterTransactions(transactions, filters);
 
     if (rows.length === 0) {
@@ -295,7 +313,7 @@
     const table = [
       COLUMNS.map(column => column.header),
       ...rows.map(t => COLUMNS.map(column => {
-        if (column.key === 'typeLabel') return t.type === 'income' ? 'Pemasukan' : 'Pengeluaran';
+        if (column.key === 'typeLabel') return t.type === 'income' ? 'Pemasukan' : (t.type === 'saving' ? 'Tabungan' : 'Pengeluaran');
         if (column.key === 'amount') return Number(t.amount) || 0;
         return t[column.key] === null || t[column.key] === undefined ? '' : String(t[column.key]);
       }))

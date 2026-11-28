@@ -1465,3 +1465,8 @@ body.cf-authed .sync-status {
   .range-inputs { grid-template-columns: 1fr; }
   .range-day { min-height: 40px; }
 }
+
+/* Rentang Data: input From/To rata tengah + modal di Ringkasan */
+.range-inputs .form-control { text-align: center; }
+#dash-range-open { display: inline-flex; align-items: center; gap: 6px; }
+#savings-history-chart { display: block; }
