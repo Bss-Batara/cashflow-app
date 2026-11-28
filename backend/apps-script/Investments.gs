@@ -13,12 +13,24 @@ function createInvestment(input) {
     const spreadsheet = getConfiguredSpreadsheet_();
     const sheet = getRequiredSheet_('Investments', spreadsheet);
     const now = new Date();
+
+    // Idempotency lintas perangkat: client_ref opsional (helper bersama di Transactions.gs).
+    const clientRef = normalizeClientRef_(input);
+    if (clientRef) {
+      const values = sheet.getDataRange().getValues();
+      const found = findRowByClientRef_(values, auth.email, clientRef, 12, 1, 18);
+      if (found) {
+        return investmentToObject_(found);
+      }
+      ensureClientRefHeader_(sheet, getExpectedHeaders_('Investments'));
+    }
+
     const investmentId = Utilities.getUuid();
     const row = [
       investmentId, auth.email, payload.name, payload.code, payload.categoryId,
       payload.buyPriceMinor, payload.currentPriceMinor, payload.units,
       payload.unitName, payload.unitMultiplier, payload.dateBought, payload.notes,
-      'active', now, auth.email, now, auth.email, 1
+      'active', now, auth.email, now, auth.email, 1, clientRef
     ];
 
     sheet.appendRow(row);
@@ -169,6 +181,8 @@ function investmentToObject_(row) {
     categoryId: row[4], buyPriceMinor: row[5], currentPriceMinor: row[6],
     units: row[7], unitName: row[8], unitMultiplier: row[9], dateBought: row[10],
     notes: row[11], status: row[12], createdAt: row[13], createdBy: row[14],
-    updatedAt: row[15], updatedBy: row[16], version: row[17]
+    updatedAt: row[15], updatedBy: row[16], version: row[17],
+    // Dikembalikan agar klien dapat mencocokkan item antrean (idempotensi lintas perangkat).
+    clientRef: row[18] || ''
   };
 }

@@ -14,13 +14,13 @@ function getCashflowSchema_() {
     Transactions: [
       'transactionId', 'ownerId', 'type', 'title', 'amountMinor', 'currency',
       'categoryId', 'transactionDate', 'wallet', 'note', 'status', 'createdAt',
-      'createdBy', 'updatedAt', 'updatedBy', 'version'
+      'createdBy', 'updatedAt', 'updatedBy', 'version', 'client_ref'
     ],
     Investments: [
       'investmentId', 'ownerId', 'name', 'code', 'categoryId', 'buyPriceMinor',
       'currentPriceMinor', 'units', 'unitName', 'unitMultiplier', 'dateBought',
       'notes', 'status', 'createdAt', 'createdBy', 'updatedAt', 'updatedBy',
-      'version'
+      'version', 'client_ref'
     ],
     Categories: [
       'categoryId', 'ownerId', 'categoryType', 'name', 'displayName', 'color',
@@ -75,6 +75,7 @@ function getSchemaRows_() {
     updatedAt: ['datetime', true, 'ISO-8601 timestamp', 'Last update timestamp'],
     updatedBy: ['string', true, 'backend authenticated identity', 'Last updater identity'],
     version: ['integer', true, 'positive optimistic-lock version', 'Record version'],
+    client_ref: ['string', false, 'idempotency key, max 64 chars [A-Za-z0-9._:-]', 'Client reference for idempotent retries'],
     investmentId: ['string', true, 'immutable unique identifier', 'Investment identifier'],
     name: ['string', true, '1-200 characters', 'Investment name'],
     code: ['string', true, 'uppercase normalized identifier', 'Investment code'],

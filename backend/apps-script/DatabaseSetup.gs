@@ -27,6 +27,38 @@ function setupCashflowDatabase() {
   }
 }
 
+/**
+ * Migrasi header ADDITIVE untuk sheet yang sudah berjalan.
+ *
+ * Hanya menambahkan nama header yang belum ada PADA POSISI KANAN (mis. client_ref)
+ * dan tidak pernah mengubah/menghapus sel data. Bila header lama tidak lagi cocok
+ * sebagai awalan dari skema baru, fungsi ini TIDAK melakukan apa pun (aman: biarkan
+ * pemeriksaan terpisah yang melaporkan ketidakcocokan).
+ *
+ * @return {Array<string>} daftar header yang baru ditambahkan (kosong bila tidak ada)
+ */
+function migrateAdditiveHeaders_(sheet, expectedHeaders) {
+  if (!sheet || !expectedHeaders || !expectedHeaders.length) return [];
+  const lastColumn = Math.max(1, sheet.getLastColumn());
+  const width = Math.max(lastColumn, expectedHeaders.length);
+  const headerRow = sheet.getRange(1, 1, 1, width).getValues()[0];
+
+  const added = [];
+  for (let index = 0; index < expectedHeaders.length; index += 1) {
+    const current = String(headerRow[index] || '').trim();
+    const expected = String(expectedHeaders[index] || '').trim();
+    if (current === expected) continue;
+    if (current === '' && index >= lastColumn) {
+      sheet.getRange(1, index + 1).setValue(expected);
+      added.push(expected);
+      continue;
+    }
+    // Header tidak cocok pada posisi yang sudah terisi → jangan tebak, hentikan.
+    break;
+  }
+  return added;
+}
+
 /** Creates only absent sheets; existing sheets are left untouched. */
 function initializeMissingSheets_(spreadsheet) {
   const config = getCashflowConfig_();
@@ -40,6 +72,12 @@ function initializeMissingSheets_(spreadsheet) {
 
     if (sheet) {
       existing.push(sheetName);
+      // Migrasi ADDITIVE: hanya menambahkan header yang belum ada di kanan
+      // (mis. client_ref) tanpa menyentuh satu pun baris data lama.
+      const migrated = migrateAdditiveHeaders_(sheet, expectedHeaders);
+      if (migrated.length) {
+        protection.push({ sheetName: sheetName, result: { addedHeaders: migrated } });
+      }
       return;
     }
 

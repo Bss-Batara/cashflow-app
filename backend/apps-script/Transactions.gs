@@ -16,6 +16,20 @@ function createTransaction(input) {
     const spreadsheet = getConfiguredSpreadsheet_();
     const sheet = getRequiredSheet_('Transactions', spreadsheet);
     const now = new Date();
+
+    // Idempotency: client_ref (opsional) mencegah baris ganda saat retry.
+    // Dipakai bersama oleh createTransaction & createInvestment (lihat helper di bawah).
+    const clientRef = normalizeClientRef_(input);
+
+    if (clientRef) {
+      const values = sheet.getDataRange().getValues();
+      const found = findRowByClientRef_(values, auth.email, clientRef, 10, 1, 16);
+      if (found) {
+        return transactionToObject_(found);
+      }
+      ensureClientRefHeader_(sheet, getExpectedHeaders_('Transactions'));
+    }
+
     const transactionId = Utilities.getUuid();
     const row = [
       transactionId,
@@ -33,7 +47,8 @@ function createTransaction(input) {
       auth.email,
       now,
       auth.email,
-      1
+      1,
+      clientRef
     ];
 
     sheet.appendRow(row);
@@ -269,8 +284,71 @@ function transactionToObject_(row) {
     createdBy: row[12],
     updatedAt: row[13],
     updatedBy: row[14],
-    version: row[15]
+    version: row[15],
+    /**
+     * client_ref dikembalikan ke klien supaya retry/merge lintas perangkat dapat
+     * mencocokkan item antrean dengan baris server (bukan mencocokkan isi).
+     * Baris lama tanpa client_ref mengembalikan '' (kompatibel).
+     */
+    clientRef: row[16] || ''
   };
+}
+
+/* ==========================================================================
+   Idempotency helper (client_ref) — dipakai createTransaction & createInvestment
+   ========================================================================== */
+
+/**
+ * Normalisasi + validasi client_ref opsional.
+ * Aturan: dipangkas, maksimal 64 karakter, hanya [A-Za-z0-9._:-]; kosong = tidak ada.
+ */
+function normalizeClientRef_(input) {
+  const value = String((input && input.clientRef) || '').trim();
+  if (!value) return '';
+  const clientRef = value.slice(0, 64);
+  if (!/^[A-Za-z0-9._:-]+$/.test(clientRef)) {
+    throw new Error('clientRef tidak valid.');
+  }
+  return clientRef;
+}
+
+/**
+ * Cari baris milik pemilik yang sama dengan client_ref tertentu dan belum voided.
+ * @param {Array<Array>} values     seluruh isi sheet (termasuk header)
+ * @param {string} ownerId          email pemilik (kolom ownerId)
+ * @param {string} clientRef        referensi yang dicari
+ * @param {number} statusIndex      indeks kolom status
+ * @param {number} ownerIndex       indeks kolom ownerId
+ * @param {number} clientRefIndex   indeks kolom client_ref
+ * @return {Array|null} baris yang cocok (array), atau null
+ */
+function findRowByClientRef_(values, ownerId, clientRef, statusIndex, ownerIndex, clientRefIndex) {
+  if (!clientRef) return null;
+  const matches = (values || []).slice(1).filter(row =>
+    row &&
+    String(row[clientRefIndex] || '') === clientRef &&
+    String(row[ownerIndex] || '').toLowerCase() === String(ownerId || '').toLowerCase() &&
+    String(row[statusIndex] || '') !== 'voided'
+  );
+  return matches.length ? matches[0] : null;
+}
+
+/**
+ * Pastikan header kolom client_ref ada pada sheet yang sudah berjalan.
+ * HANYA menambahkan header yang belum ada (kolom di kanan) dan tidak pernah
+ * menyentuh baris data — aman untuk database lama.
+ */
+function ensureClientRefHeader_(sheet, expectedHeaders) {
+  if (!sheet || !expectedHeaders || !expectedHeaders.length) return false;
+  const index = expectedHeaders.indexOf('client_ref');
+  if (index < 0) return false;
+
+  const lastColumn = Math.max(1, sheet.getLastColumn());
+  const headerRow = sheet.getRange(1, 1, 1, Math.max(lastColumn, index + 1)).getValues()[0];
+  if (String(headerRow[index] || '').trim() === 'client_ref') return false;
+
+  sheet.getRange(1, index + 1).setValue('client_ref');
+  return true;
 }
 
 function appendTransactionAudit_(spreadsheet, data) {

@@ -1,6 +1,10 @@
 # Multi-Device Identity (client_ref) — Desain & Rencana Migrasi
 
-Status: **desain + kesiapan frontend**, backend belum diubah/di-deploy.
+Status: **backend SUDAH diterapkan di kode** (idempotensi `client_ref` pada
+`createTransaction` **dan** `createInvestment`, kolom `client_ref` pada skema +
+migrasi header additive, `clientRef` dikembalikan pada `list`/`update`).
+Uji otomatis: `node --test test/client-ref.test.mjs` (11/11 lulus).
+**Deployment ditunda** sampai release window (lihat `docs/RELEASE_CANDIDATE.md`).
 
 ## Masalah
 
