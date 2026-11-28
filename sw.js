@@ -20,6 +20,7 @@ const SHELL = [
   'js/auth.js',
   'js/app.js',
   'js/export-xlsx.js',
+  'js/date-range.js',
   'assets/icon-192.png',
   'assets/icon-512.png'
 ];

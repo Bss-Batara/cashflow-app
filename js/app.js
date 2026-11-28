@@ -489,6 +489,13 @@ class FinApp {
   }
 
   // --- Expenses View ---
+  /** Rentang Data aktif (js/date-range.js) — dipakai memfilter tampilan. */
+  inActiveRange_(date) {
+    const range = globalThis.cashflowDateRange;
+    if (!range || typeof range.matches !== 'function') return true;
+    return range.matches(date);
+  }
+
   renderExpenses() {
     const daily = window.financeStore.getDailyMetrics();
     const sumEl = document.getElementById('expense-today-sum');
@@ -519,6 +526,9 @@ class FinApp {
     const monthPrefix = todayStr.substring(0, 7);
 
     let filtered = allTx.filter(t => {
+      // Rentang Data aktif (From & To inklusif)
+      if (!this.inActiveRange_(t.date)) return false;
+
       // Date filter
       if (this.expenseFilter === 'today' && t.date !== todayStr) return false;
       if (this.expenseFilter === 'yesterday' && t.date !== yesterdayStr) return false;
@@ -583,7 +593,9 @@ class FinApp {
     }
     if (savingsEl) savingsEl.textContent = `${cf.savingsRate.toFixed(1)}%`;
 
-    const incomeTx = window.financeStore.getTransactions().filter(t => t.type === 'income');
+    const incomeTx = window.financeStore.getTransactions()
+      .filter(t => t.type === 'income')
+      .filter(t => this.inActiveRange_(t.date));
     const container = document.getElementById('income-list-container');
     if (container) {
       if (incomeTx.length === 0) {

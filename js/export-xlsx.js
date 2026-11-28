@@ -198,16 +198,17 @@
   /* ----------------------------- filter & UI ----------------------------- */
 
   function readFilters() {
+    // Rentang Data aktif (js/date-range.js) — From & To inklusif.
+    const range = globalThis.cashflowDateRange;
+    if (range && typeof range.get === 'function') {
+      const active = range.get();
+      if (active.from && active.to) return { month: '', from: active.from, to: active.to, year: '' };
+    }
     const val = (id) => {
       const node = document.getElementById(id);
       return node ? String(node.value || '').trim() : '';
     };
-    return {
-      month: val('export-month'),
-      from: val('export-from'),
-      to: val('export-to'),
-      year: val('export-year')
-    };
+    return { month: val('export-month'), from: val('export-from'), to: val('export-to'), year: val('export-year') };
   }
 
   function filterTransactions(transactions, filters) {

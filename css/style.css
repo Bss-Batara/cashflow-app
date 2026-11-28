@@ -1436,3 +1436,32 @@ body.cf-authed .sync-status {
 @media (max-width: 420px) {
   .export-filters { grid-template-columns: 1fr; }
 }
+
+/* ==========================================================================
+   RENTANG DATA (modal kalender) — tema tetap putih & merah.
+   ========================================================================== */
+.export-range { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+.export-range-value { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+.range-modal { max-width: 420px; }
+.range-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.range-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.range-cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.range-weekdays, .range-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.range-weekdays span { text-align: center; font-size: 11px; font-weight: 700; color: var(--text-muted); letter-spacing: .04em; }
+.range-grid { margin-bottom: 10px; }
+.range-day {
+  aspect-ratio: 1 / 1; min-height: 36px; display: flex; align-items: center; justify-content: center;
+  border: 1px solid transparent; border-radius: var(--radius-md); background: transparent;
+  color: var(--text-primary); font-size: 13px; font-weight: 500; cursor: pointer; touch-action: manipulation;
+}
+.range-day:hover { background: var(--primary-subtle); }
+.range-day.is-empty { visibility: hidden; }
+.range-day.in-range { background: var(--primary-subtle); border-color: var(--border-subtle); }
+.range-day.is-today { border-color: var(--primary); }
+.range-day.is-start, .range-day.is-end { background: var(--primary); border-color: var(--primary); color: #ffffff; font-weight: 700; }
+.range-day:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+.range-foot { display: flex; justify-content: flex-end; gap: 10px; margin-top: 12px; }
+@media (max-width: 420px) {
+  .range-inputs { grid-template-columns: 1fr; }
+  .range-day { min-height: 40px; }
+}
