@@ -132,3 +132,32 @@ menghapus data browser kecuali sudah dipastikan tersinkron.
 *Ekspor ke Excel* untuk arsip bulanan.
 
 **Status akhir: GO.**
+
+---
+
+## Rilis 2026-11-28b — Rentang Data & pembersihan UI ekspor
+
+| Item | Nilai |
+|---|---|
+| Frontend commit | **384a062** (production) |
+| Waktu deploy | 2026-11-28 (push 4fcfa95..384a062) |
+| URL produksi | https://bss-batara.github.io/cashflow-app/ |
+| Backend | tidak berubah pada rilis ini (tanpa perubahan backend/apps-script) |
+
+**Fitur baru / revisi:**
+- **Rentang Data**: tombol membuka modal kalender (Date Range) dengan input From/To, kalender 7 kolom SUN–SAT, navigasi bulan, highlight awal/akhir/rentang, serta Reset / Close / Confirm. Rentang lintas bulan & input manual didukung; aman timezone (tanggal diperlakukan sebagai string lokal, tanpa UTC).
+- **Default rentang**: tanggal 1 bulan berjalan → hari ini (inklusif); label tombol langsung menampilkan rentang (tidak pernah "Belum dipilih"); Reset kembali ke default.
+- **Filter tanggal** berlaku pada tampilan daftar pengeluaran & pemasukan dan pada ekspor.
+- **UI ekspor**: hanya **Ekspor ke Excel (.xlsx)**; tombol CSV, Download Backup JSON, dan Restore Backup JSON dihapus dari UI (fungsi internal tetap ada). Deskripsi: "Pilih rentang data lalu ekspor ke Excel. Jika tidak ada filter yang dipilih, yang diekspor adalah **bulan berjalan**."
+- **Akun & Sesi**: "Masuk sebagai <nama>" dipertahankan; teks motivasi baru "**Keuangan yang Sehat di Mulai dari Kesadaran !**" + kalimat dengan bold pada **Kebebasan** dan **Finansial di Masa Depan**.
+- Service worker: js/date-range.js terdaftar pada cache shell; token cache aset di-bump ke `?v=20261128e` agar klien tidak menyajikan UI lama.
+
+**Bukti verifikasi (rilis ini):**
+- Verifikasi browser fitur Rentang Data: **37/37 lulus** (default, modal, kalender 7 kolom SUN–SAT, navigasi bulan, klik rentang lintas bulan, input manual, validasi terbalik, Reset, Close, Confirm, filter tampilan, ekspor sesuai rentang, CSV/JSON terhapus, teks akun + bold, responsif 1280 & 390, tanpa exception JavaScript).
+- XLSX hasil ekspor (divalidasi openpyxl): sheet Transaksi, **hanya 2 baris dalam rentang** (baris di luar rentang tidak ikut), nominal bertipe angka, jumlah 33.300.
+- Regression: unit **15/15**, client-ref **11/11**, e2e-smoke **8/8**, e2e-edit **9/9**.
+- CI pada 384a062: *Validate CashFlow* **success**; *pages build and deployment* **success**.
+- Produksi live: index.html 54.074 byte memuat tombol Rentang Data + modal Date Range; js/date-range.js **HTTP 200** (memuat cashflowDateRange); css/style.css 200 (memuat .range-modal); sw.js 200 (memuat date-range.js); token `?v=20261128e`.
+- API live: health **HTTP 200** `{service:"cashflow-api", schemaVersion:"1.0.0", authenticated:false}`; listTransactions tanpa token → `AUTHORIZATION_FAILED` (autentikasi tetap ditegakkan).
+
+**Rollback rilis ini:** `git revert 384a062 && git push` (atau pulihkan berkas dari `_backup/deploy-20261128-194724/frontend-live-sebelum-deploy/`). Tidak ada perubahan backend/database pada rilis ini, sehingga tidak diperlukan rollback data.
