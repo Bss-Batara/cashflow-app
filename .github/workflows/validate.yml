@@ -22,8 +22,33 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          find js backend/apps-script -type f \( -name '*.js' -o -name '*.gs' \) -print0 |
-            xargs -0 -n1 node --check
+          # .js: node --check langsung.
+          find js -type f -name '*.js' -print0 | xargs -0 -n1 node --check
+
+      - name: Validate Apps Script syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          # .gs TIDAK dikenali `node --check` (ERR_UNKNOWN_FILE_EXTENSION), jadi
+          # diparse dengan vm.Script — tetap memvalidasi sintaks, tanpa false-fail.
+          node -e '
+            const fs = require("fs");
+            const path = require("path");
+            const vm = require("vm");
+            const dir = "backend/apps-script";
+            const files = fs.readdirSync(dir).filter((name) => name.endsWith(".gs")).sort();
+            let failed = 0;
+            for (const file of files) {
+              try {
+                new vm.Script(fs.readFileSync(path.join(dir, file), "utf8"), { filename: file });
+              } catch (error) {
+                failed += 1;
+                console.error("SYNTAX ERROR " + file + ": " + error.message);
+              }
+            }
+            console.log("Apps Script: " + (files.length - failed) + "/" + files.length + " berkas .gs lolos parse");
+            if (failed > 0) process.exit(1);
+          '
 
       - name: Validate required deployment files
         shell: bash

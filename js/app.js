@@ -1010,7 +1010,9 @@ class FinApp {
       for (const item of queue) {
         try {
           if (item.kind === 'transaction' && item.op === 'create') {
-            const alreadyOnServer = Number(item.attempts || 0) > 0 && serverTxRows.some(row => sameTx(row, item.data));
+            const refMatch = serverTxRows.some(row => row.clientRef && row.clientRef === (item.clientRef || item.id));
+            const fallbackMatch = Number(item.attempts || 0) > 0 && serverTxRows.some(row => !row.clientRef && sameTx(row, item.data));
+            const alreadyOnServer = refMatch || fallbackMatch;
             if (!alreadyOnServer) {
               const categoryId = await api.resolveCategoryId(item.data.category, item.data.type);
               window.financeStore.markSyncAttempt(item.id);
@@ -1066,7 +1068,9 @@ class FinApp {
               });
             }
           } else if (item.kind === 'investment' && item.op === 'create') {
-            const alreadyOnServer = Number(item.attempts || 0) > 0 && serverInvRows.some(row => sameInv(row, item.data));
+            const refMatch = serverInvRows.some(row => row.clientRef && row.clientRef === (item.clientRef || item.id));
+            const fallbackMatch = Number(item.attempts || 0) > 0 && serverInvRows.some(row => !row.clientRef && sameInv(row, item.data));
+            const alreadyOnServer = refMatch || fallbackMatch;
             if (!alreadyOnServer) {
               window.financeStore.markSyncAttempt(item.id);
               await api.post('createInvestment', {
