@@ -282,6 +282,7 @@ class FinApp {
     this.renderExpenses();
     this.renderIncome();
     this.renderPortfolio();
+    this.renderSavingsHistory();
     this.renderReports();
     this.renderCharts();
   }
@@ -290,7 +291,13 @@ class FinApp {
   renderNetWorth() {
     const netWorth = window.financeStore.getNetWorth();
     const el = document.getElementById('sidebar-networth');
-    if (el) el.textContent = window.formatIDR(netWorth);
+    if (!el) return;
+    el.textContent = window.formatIDR(netWorth);
+    // Revisi BOS: warna mengikuti nilai aktual (<= 0 merah, > 0 hijau).
+    const positive = Number(netWorth) > 0;
+    el.classList.toggle('text-income', positive);
+    el.classList.toggle('text-expense', !positive);
+    el.style.color = positive ? 'var(--income-color)' : 'var(--expense-color)';
   }
 
   // --- Dashboard View ---
@@ -453,7 +460,8 @@ class FinApp {
       netCashflowEl.className = 'metric-value ' + (cf.net >= 0 ? 'text-income' : 'text-expense');
     }
     if (savingsRateEl) {
-      savingsRateEl.textContent = 'Tingkat Tabungan: ' + cf.savingsRate.toFixed(1) + '%';
+      // Revisi BOS: kartu Arus Kas Bersih memakai teks tetap.
+      if (savingsRateEl) savingsRateEl.textContent = '! Besar Pasak Daripada Tiang';
     }
     if (portValEl) portValEl.textContent = window.formatIDR(port.totalCurrentValue);
     if (portGainEl) {
@@ -619,24 +627,31 @@ class FinApp {
 
   // --- Portfolio View ---
   /** Grafik histori tabungan (akumulasi nominal per tanggal transaksi, data nyata). */
+  /**
+   * Nilai tabungan aktual. Field mentah investasi TIDAK memuat `currentValue`;
+   * nilainya dihitung sama seperti store.getPortfolioMetrics():
+   *   unit × unitMultiplier × currentPrice.
+   */
+  savingValue_(inv) {
+    const multiplier = Number(inv.unitMultiplier) || 1;
+    const units = (Number(inv.units) || 0) * multiplier;
+    return units * (Number(inv.currentPrice) || 0);
+  }
+
+  /** Grafik histori tabungan (akumulasi nilai tabungan per tanggal transaksi). */
   renderSavingsHistory() {
-    const canvas = document.getElementById('savings-history-chart');
-    const empty = document.getElementById('savings-history-empty');
-    if (!canvas) return;
+    const canvases = [
+      { canvasId: 'savings-history-chart', emptyId: 'savings-history-empty' },
+      { canvasId: 'income-savings-chart', emptyId: 'income-savings-empty' }
+    ].filter(entry => document.getElementById(entry.canvasId));
+    if (canvases.length === 0) return;
 
     const store = window.financeStore;
     const list = (store && typeof store.getInvestments === 'function' ? store.getInvestments() : []) || [];
     const range = globalThis.cashflowDateRange;
     const rows = list
-      .map(inv => ({ date: String(inv.dateBought || '').slice(0, 10), value: Number(inv.currentValue) || 0 }))
+      .map(inv => ({ date: String(inv.dateBought || '').slice(0, 10), value: this.savingValue_(inv) }))
       .filter(row => row.date && (!range || typeof range.matches !== 'function' || range.matches(row.date)));
-
-    if (rows.length === 0) {
-      if (empty) empty.hidden = false;
-      canvas.style.display = 'none';
-      if (window.FinCharts) window.FinCharts.renderCashFlowChart('savings-history-chart', []);
-      return;
-    }
 
     const perDate = new Map();
     rows.forEach(row => perDate.set(row.date, (perDate.get(row.date) || 0) + row.value));
@@ -647,9 +662,20 @@ class FinApp {
       return { label: date.slice(5), income: running, expense: 0 };
     });
 
-    if (empty) empty.hidden = true;
-    canvas.style.display = '';
-    if (window.FinCharts) window.FinCharts.renderCashFlowChart('savings-history-chart', series);
+    canvases.forEach(entry => {
+      const canvas = document.getElementById(entry.canvasId);
+      const empty = document.getElementById(entry.emptyId);
+      if (series.length === 0) {
+        if (empty) empty.hidden = false;
+        if (canvas) canvas.style.display = 'none';
+        return;
+      }
+      if (empty) empty.hidden = true;
+      if (canvas) canvas.style.display = '';
+      if (window.FinCharts) {
+        setTimeout(() => window.FinCharts.renderCashFlowChart(entry.canvasId, series), 30);
+      }
+    });
   }
 
   renderPortfolio() {

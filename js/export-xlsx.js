@@ -290,11 +290,16 @@
      */
     const savings = (typeof store.getInvestments === 'function' ? store.getInvestments() : []) || [];
     savings.forEach(inv => {
+      // Nilai tabungan = unit × unitMultiplier × currentPrice (field mentah investasi
+      // tidak memiliki currentValue — itu dihitung di store.getPortfolioMetrics()).
+      const multiplier = Number(inv.unitMultiplier) || 1;
+      const units = (Number(inv.units) || 0) * multiplier;
+      const savingValue = units * (Number(inv.currentPrice) || 0);
       transactions.push({
         id: inv.id || '',
         type: 'saving',
         title: inv.name || inv.category || 'Tabungan',
-        amount: Number(inv.currentValue) || 0,
+        amount: savingValue,
         category: inv.category || 'Tabungan',
         date: String(inv.dateBought || '').slice(0, 10),
         wallet: '',

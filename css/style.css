@@ -1470,3 +1470,9 @@ body.cf-authed .sync-status {
 .range-inputs .form-control { text-align: center; }
 #dash-range-open { display: inline-flex; align-items: center; gap: 6px; }
 #savings-history-chart { display: block; }
+
+/* Batch 6: modal Date Range ringkas (tanpa kalender) + label From/To rata tengah */
+.range-modal { max-width: 340px; }
+.range-field { text-align: center; }
+.range-field .text-xs, .range-field .form-control { text-align: center; }
+.range-foot { justify-content: space-between; }

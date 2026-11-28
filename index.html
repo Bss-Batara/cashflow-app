@@ -10,7 +10,7 @@
   <title>CashFlow - Catat Keuangan &amp; Tabungan</title>
   
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="css/style.css?v=20261128f">
+  <link rel="stylesheet" href="css/style.css?v=20261129a">
   <link rel="stylesheet" href="css/login.css?v=20261128c">
 </head>
 <body>
@@ -184,7 +184,7 @@
       <div class="sidebar-footer">
         <div class="networth-badge">
           <div class="text-xs text-muted">Total Kekayaan Bersih</div>
-          <div id="sidebar-networth" class="text-lg font-bold text-income">Rp 0</div>
+          <div id="sidebar-networth" class="text-lg font-bold">Rp 0</div>
           <div class="text-xs text-secondary" style="margin-top: 4px;">Kas + Nilai Investasi</div>
         </div>
       </div>
@@ -265,11 +265,10 @@
           <div class="metric-card netflow">
             <div class="metric-top">
               <span class="metric-label">Arus Kas Bersih</span>
-              <div class="metric-icon-wrap">⚡</div>
+              <div class="metric-icon-wrap"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/></svg></div>
             </div>
             <div id="dash-net-cashflow" class="metric-value">Rp 0</div>
-            <div id="dash-savings-rate" class="metric-sub">Tingkat Tabungan: 0%</div>
-            <div class="metric-month" id="dash-month-net">(—)</div>
+            <div id="dash-savings-rate" class="metric-sub">! Besar Pasak Daripada Tiang</div>
           </div>
 
           <div class="metric-card expense">
@@ -279,7 +278,6 @@
             </div>
             <div id="dash-total-expense" class="metric-value text-expense">Rp 0</div>
             <div class="metric-sub">Bedakan Kebutuhan dan Keinginan</div>
-            <div class="metric-month" id="dash-month-expense">(—)</div>
           </div>
 
           <div class="metric-card income">
@@ -289,7 +287,6 @@
             </div>
             <div id="dash-total-income" class="metric-value text-income">Rp 0</div>
             <div class="metric-sub">Tingkatkan Skill dan Tambah Pemasukan</div>
-            <div class="metric-month" id="dash-month-income">(—)</div>
           </div>
 
           <div class="metric-card portfolio">
@@ -299,7 +296,6 @@
             </div>
             <div id="dash-portfolio-val" class="metric-value" style="color: var(--accent-gold);">Rp 0</div>
             <div id="dash-portfolio-gain" class="metric-sub">Tingkatkan Terus Tabungan</div>
-            <div class="metric-month" id="dash-month-portfolio">(—)</div>
           </div>
         </div>
 
@@ -444,7 +440,7 @@
           <div class="metric-card netflow">
             <div class="metric-top">
               <span class="metric-label">Net Cash Inflow</span>
-              <div class="metric-icon-wrap">⚡</div>
+              <div class="metric-icon-wrap"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/></svg></div>
             </div>
             <div id="income-net-val" class="metric-value">Rp 0</div>
             <div class="metric-sub">Pemasukan dikurangi pengeluaran</div>
@@ -455,7 +451,7 @@
               <span class="metric-label">Tingkat Tabungan (Savings)</span>
               <div class="metric-icon-wrap">📊</div>
             </div>
-            <div id="income-savings-percent" class="metric-value" style="color: var(--accent-blue);">0%</div>
+            <div id="income-savings-percent" class="metric-value" style="color: var(--income-color);">0%</div>
             <div class="metric-sub">Target ideal: > 20%</div>
           </div>
         </div>
@@ -473,6 +469,17 @@
           </div>
           <div id="income-list-container" class="tx-list"></div>
         </div>
+
+          <div class="card" style="margin-top: 20px;">
+            <div class="card-header">
+              <div class="card-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><polyline points="7 14 11 10 14 13 19 7"/></svg>
+                <span>Histori Menabung</span>
+              </div>
+            </div>
+            <canvas id="income-savings-chart" style="width: 100%; height: 200px;"></canvas>
+            <p id="income-savings-empty" class="empty" hidden>Belum ada histori tabungan pada rentang ini.</p>
+          </div>
       </section>
 
       <!-- VIEW 4: TABUNGAN -->
@@ -495,7 +502,6 @@
           </div>
           <canvas id="savings-history-chart" style="width: 100%; height: 220px;"></canvas>
           <p id="savings-history-empty" class="empty" hidden>Belum ada histori tabungan. Tambahkan tabungan untuk melihat perkembangannya.</p>
-          <p class="text-xs text-muted" style="margin-top: 8px;">Histori dihitung dari akumulasi nominal tabungan per tanggal transaksi (sesuai Rentang Data aktif).</p>
         </div>
 
         <!-- Portfolio Actions & Categories -->
@@ -579,7 +585,7 @@
                   <span class="font-medium">Diversifikasi Portofolio</span>
                   <span id="health-asset-count" class="font-bold" style="color: var(--accent-gold);">0 Aset</span>
                 </div>
-                <div class="text-xs text-muted">Tersebar di berbagai instrumen (saham, emas, reksadana, kripto).</div>
+                <div class="text-xs text-muted">Tersebar di Berbagai Instrumen (Saham, Emas, Reksadana dll).</div>
               </div>
             </div>
           </div>
@@ -634,7 +640,8 @@
             </button>
           </div>
 <div style="border-top: 1px solid var(--border-color); padding-top: 14px;">
-            <div class="text-xs text-muted" style="margin-bottom: 8px;">Ambil ulang data terbaru dari server:</div>
+            <div class="text-xs text-muted" style="margin-bottom: 8px;">Ambil Ulang Data Terbaru dari Server.</div>
+            <span class="sync-status" data-sync-dot role="status" aria-label="Status sinkronisasi" title="Status sinkronisasi"></span>
             <button class="btn btn-secondary btn-sm" onclick="app.resetDemoData()">Muat Ulang dari Server</button>
           </div>
         </div>
@@ -800,17 +807,6 @@
           <input id="range-to" class="form-control" type="date">
         </label>
       </div>
-      <div class="range-cal">
-        <div class="range-cal-head">
-          <button type="button" id="range-prev" class="btn btn-secondary btn-sm" aria-label="Bulan sebelumnya">&lsaquo;</button>
-          <span id="range-month" class="font-bold"></span>
-          <button type="button" id="range-next" class="btn btn-secondary btn-sm" aria-label="Bulan berikutnya">&rsaquo;</button>
-        </div>
-        <div class="range-weekdays">
-          <span>SUN</span><span>MON</span><span>TUE</span><span>WED</span><span>THU</span><span>FRI</span><span>SAT</span>
-        </div>
-        <div class="range-grid" id="range-grid"></div>
-      </div>
       <p id="range-error" class="text-xs" style="color: var(--expense-color); margin: 0; min-height: 16px;"></p>
       <div class="range-foot">
         <button type="button" id="range-close" class="btn btn-secondary">Close</button>
@@ -883,13 +879,13 @@
   <div id="toast-container" class="toast-container"></div>
 
   <!-- SCRIPTS -->
-  <script src="js/api.js?v=20261128f"></script>
-  <script src="js/store.js?v=20261128f"></script>
+  <script src="js/api.js?v=20261129a"></script>
+  <script src="js/store.js?v=20261129a"></script>
   <script src="js/charts.js?v=20261128c"></script>
-  <script src="js/auth.js?v=20261128f"></script>
-  <script src="js/date-range.js?v=20261128f"></script>
-  <script src="js/export-xlsx.js?v=20261128f"></script>
-  <script src="js/app.js?v=20261128f"></script>
+  <script src="js/auth.js?v=20261129a"></script>
+  <script src="js/date-range.js?v=20261129a"></script>
+  <script src="js/export-xlsx.js?v=20261129a"></script>
+  <script src="js/app.js?v=20261129a"></script>
 
   <!-- SERVICE WORKER (PWA installable) -->
   <script>
