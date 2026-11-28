@@ -161,3 +161,28 @@ menghapus data browser kecuali sudah dipastikan tersinkron.
 - API live: health **HTTP 200** `{service:"cashflow-api", schemaVersion:"1.0.0", authenticated:false}`; listTransactions tanpa token → `AUTHORIZATION_FAILED` (autentikasi tetap ditegakkan).
 
 **Rollback rilis ini:** `git revert 384a062 && git push` (atau pulihkan berkas dari `_backup/deploy-20261128-194724/frontend-live-sebelum-deploy/`). Tidak ada perubahan backend/database pada rilis ini, sehingga tidak diperlukan rollback data.
+
+---
+
+## Rilis 2026-11-28c — Revisi UI/UX terkoordinasi (menu, Ringkasan, Tabungan, XLSX)
+
+| Item | Nilai |
+|---|---|
+| Frontend commit | **9bf6137** (production) |
+| Waktu deploy | 2026-11-28 (push 6a7623a..9bf6137) |
+| URL produksi | https://bss-batara.github.io/cashflow-app/ |
+| Backend | tidak berubah (tanpa perubahan backend/apps-script) |
+
+**Revisi:** menu (Pengeluaran / Pemasukan / Tabungan) · Ringkasan memakai **satu kontrol Rentang Data** (default 1 bulan berjalan → hari ini) yang benar-benar memfilter metrik · kartu **TOTAL TABUNGAN** + teks "Tingkatkan Terus Tabungan" + ikon celengan · subtitle & teks kartu Ringkasan diperbarui · judul/subtitle halaman Pengeluaran, Pemasukan, Tabungan · Tabungan: **satu kartu** (Total Tabungan Sekarang) + **grafik histori** dari data nyata (empty state bila kosong) · tabel Tabungan **4 kolom** (Aset/Kode · Kategori · Nominal Date · Aksi) · Pengaturan: subtitle & label "Batas Anggaran" diperbarui, label range di samping tombol dihapus, deskripsi ekspor 2 baris dengan bold **Excel** & **Bulan Berjalan** · **XLSX kini memuat Tabungan** · form Rp Nabung tanpa spinner (`inputmode="numeric"`).
+
+**Bukti verifikasi:**
+- Verifikasi browser: **47/47 lulus** (menu, Ringkasan + rentang + kartu + ikon, Pengeluaran, Pemasukan, Tabungan, Pengaturan, modal Date Range, form Rp Nabung, ekspor, responsif 1280/390, tanpa exception).
+- XLSX (openpyxl): **4 baris** memuat Pengeluaran + Pemasukan + **2 Tabungan**; nominal numerik (jumlah 833.300); transaksi di luar rentang tidak ikut.
+- Regression: unit **15/15**, client-ref **11/11**, e2e-smoke **8/8**, e2e-edit **9/9**.
+- Struktur HTML seimbang: `<div>` 206/206, `<section>` 7/7.
+- Produksi live: menu baru ADA; filter Bulan/Tahun lama terhapus; `dash-range-open` ADA; `savings-history-chart` + empty state ADA; `Nominal Date` ADA; `inputmode="numeric"` ADA; token `?v=20261128f`; `js/app.js` memuat `renderSavingsHistory` & `Tingkatkan Terus Tabungan`; `js/export-xlsx.js` memuat `'saving'`.
+- CI: **Validate CashFlow success**; **pages build and deployment success**.
+
+**Rollback:** `git revert 9bf6137 && git push` (atau pulihkan berkas dari `_backup/deploy-20261128-194724/frontend-live-sebelum-deploy/`). Tanpa perubahan backend/database.
+
+**Catatan:** pada aplikasi ini tidak ada kartu berteks "Tingkatkan skill, tambah pemasukan" (item 2.6) — yang ada adalah kartu Ringkasan dengan teks serupa yang sudah diperbarui ke "Tingkatkan Skill dan Tambah Pemasukan"; tidak ada dummy data yang dibuat.
