@@ -1400,3 +1400,39 @@ body.cf-authed .sync-status {
   background: #dc2626;
   box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.2);
 }
+
+/* ==========================================================================
+   Ganti Password (collapsible) + tombol tampilkan/sembunyikan password
+   Ditambahkan untuk revisi UI: form tersembunyi secara default, ikon mata
+   nyaman disentuh di HP (>= 40px), dan toggle tidak menghapus isi input.
+   ========================================================================== */
+.pw-field { position: relative; display: block; }
+/* Tombol "Ganti Password" nyaman disentuh di HP (>= 40px), tanpa mengubah .btn-sm lain. */
+#cf-pw-toggle { min-height: 40px; }
+/* Tombol di dalam form ganti password (termasuk "Simpan Password") juga >= 40px di HP. */
+#cf-change-password .btn { min-height: 40px; }
+.pw-field .form-control { padding-right: 48px; }
+.pw-toggle {
+  position: absolute; top: 50%; right: 2px; transform: translateY(-50%);
+  width: 42px; height: 42px; display: inline-flex; align-items: center; justify-content: center;
+  background: transparent; border: 0; border-radius: var(--radius-md);
+  color: var(--text-muted); cursor: pointer; touch-action: manipulation;
+}
+.pw-toggle:hover { color: var(--text-secondary); background: color-mix(in srgb, var(--border-color) 35%, transparent); }
+.pw-toggle:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.pw-toggle[aria-pressed="true"] { color: var(--primary); }
+.pw-toggle[aria-pressed="true"]::after {
+  content: ''; position: absolute; left: 50%; top: 50%; width: 22px; height: 2px;
+  background: currentColor; border-radius: 2px; transform: translate(-50%, -50%) rotate(-45deg);
+}
+
+/* Filter ekspor (Ekspor Data) — satu kolom di HP, dua kolom di desktop. */
+.export-filters {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px; margin-bottom: 16px;
+}
+.export-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.export-field .form-control { width: 100%; }
+@media (max-width: 420px) {
+  .export-filters { grid-template-columns: 1fr; }
+}

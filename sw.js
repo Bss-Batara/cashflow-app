@@ -19,6 +19,7 @@ const SHELL = [
   'js/charts.js',
   'js/auth.js',
   'js/app.js',
+  'js/export-xlsx.js',
   'assets/icon-192.png',
   'assets/icon-512.png'
 ];

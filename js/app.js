@@ -248,7 +248,7 @@ class FinApp {
       income: { title: 'Arus Kas & Income', desc: 'Lacak sumber pendapatan, cash inflow, dan tingkat tabungan (savings rate)' },
       portfolio: { title: 'Portofolio Investasi', desc: 'Kawal pertumbuhan aset saham, reksadana, emas, kripto, dan obligasi' },
       reports: { title: 'Analisis & Laporan', desc: 'Evaluasi kebiasaan finansial dan diversifikasi kekayaan Anda' },
-      settings: { title: 'Pengaturan & Cadangan Data', desc: 'Kelola batas anggaran belanja harian, ekspor ke Excel, dan backup data' }
+      settings: { title: 'Pengaturan & Ekspor Data', desc: 'Kelola batas anggaran belanja harian, ekspor ke Excel, dan ganti kata sandi' }
     };
 
     if (titles[viewName]) {
@@ -336,7 +336,8 @@ class FinApp {
   updateMonthLabels() {
     const names = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
       'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
-    const label = '(' + (names[this.dashMonth] || '') + ')';
+    // Label bulan tanpa tanda kurung (revisi BOS: "(November)" -> "November").
+    const label = names[this.dashMonth] || '';
 
     ['dash-month-income', 'dash-month-expense', 'dash-month-net', 'dash-month-portfolio']
       .forEach(id => {

@@ -454,6 +454,38 @@
         changePassword();
       });
     }
+
+    /*
+     * Ganti Password: form ditutup secara default dan dibuka lewat tombol.
+     * Sekaligus memasang tombol tampilkan/sembunyikan (ikon mata) untuk ketiga
+     * field — dapat disentuh dengan nyaman di HP (target >= 40px) dan TIDAK
+     * menghapus isi input saat ditekan (hanya mengubah atribut `type`).
+     */
+    const passwordToggle = document.getElementById('cf-pw-toggle');
+    const passwordPanel = document.getElementById('cf-pw-panel');
+    if (passwordToggle && passwordPanel) {
+      const setOpen = (open) => {
+        passwordPanel.hidden = !open;
+        passwordToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+        if (open) {
+          const first = document.getElementById('cf-pw-current');
+          if (first) first.focus();
+        }
+      };
+      setOpen(false);
+      passwordToggle.addEventListener('click', () => setOpen(passwordPanel.hidden));
+    }
+
+    document.querySelectorAll('.pw-toggle').forEach(button => {
+      button.addEventListener('click', () => {
+        const input = document.getElementById(button.getAttribute('data-pw-target'));
+        if (!input) return;
+        const show = input.type === 'password';
+        input.type = show ? 'text' : 'password'; // nilai input tidak diubah
+        button.setAttribute('aria-pressed', show ? 'true' : 'false');
+        button.setAttribute('aria-label', show ? 'Sembunyikan password' : 'Tampilkan password');
+      });
+    });
   }
 
   async function changePassword() {
